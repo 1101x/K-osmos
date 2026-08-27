@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>한글 이름 추상화 · 訓民正音</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500;700&family=Nanum+Myeongjo:wght@400;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+
+<body>
+
+  <header id="topbar">
+    <div class="brand">
+      <h1><span class="hanja">韓글</span><span class="ko">한글 이름 추상화</span></h1>
+    </div>
+    <nav class="menu">
+      <div class="dropdown">
+        <button class="navlink" id="btn-system"><b>音節</b><em>음절</em><span class="arrow">▼</span></button>
+        <div class="dropdown-content" id="dropdown-words"></div>
+      </div>
+      <div class="dropdown">
+        <button class="navlink" id="btn-cluster"><b>語節</b><em>어절</em><span class="arrow">▼</span></button>
+        <div class="dropdown-content" id="dropdown-clusters"></div>
+      </div>
+      <button class="navlink" id="btn-galaxy"><b>文章</b><em>문장</em></button>
+    </nav>
+  </header>
+
+  <!-- 우중앙 컨트롤 패널 -->
+  <div id="right-controls">
+    <button class="navlink glyph-btn" id="btn-toggle-stars"><b>星</b><em>별</em></button>
+    <button class="navlink glyph-btn" id="btn-toggle-orbit"><b>軌</b><em>궤도</em></button>
+    <button class="navlink glyph-btn" id="btn-toggle-name"><b>名</b><em>이름</em></button>
+  </div>
+
+  <!-- 이름 입력 — 펼친 두루마리 -->
+  <div id="input-wrap">
+    <span class="rod"></span>
+    <span class="paper hanji">
+      <input id="nameInput" type="text" maxlength="40" value="김수환무. 거북이와 두루미" placeholder="이름을 적으세요">
+    </span>
+    <span class="rod"></span>
+  </div>
+
+  <div id="scene-container"></div>
+
+  <div id="scale-hud">
+    <p class="scale-label">現 位置 · 지금 보는 곳</p>
+    <p class="scale-name" id="scale-name">界</p>
+    <p class="scale-hint">스크롤 縮尺 · 우 드래그 移動 · 행성 클릭</p>
+  </div>
+
+  <footer id="timebar">
+    <div class="datetime" id="datetime">—</div>
+    <div class="transport">
+      <button class="tp-btn" id="tp-rewind" title="처음부터 다시 작도" aria-label="맨 뒤로">⟪</button>
+      <button class="tp-btn" id="tp-pause" title="일시정지" aria-label="일시정지">⏸</button>
+      <button class="tp-btn" id="tp-play" title="재생" aria-label="재생">▶</button>
+      <button class="tp-btn" id="tp-end" title="작도 완료" aria-label="맨 앞으로">⟫</button>
+    </div>
+  </footer>
+
+  <!-- 행성 클릭 → 자소 레터링 · 훈민정음 한지 UI -->
+  <div id="letter-overlay" class="hidden">
+    <div id="letter-stage"></div>
+    <div id="letter-frame"></div>
+
+    <div id="letter-vtitle">
+      <span class="vt-main">訓民正音</span>
+      <span class="vt-sub">制字解</span>
+    </div>
+
+    <button id="letter-close" aria-label="close">✕</button>
+
+    <aside id="letter-panel" class="hanji">
+      <div class="hanji-rule"></div>
+      <header class="hp-head">
+        <p class="hp-eyebrow" id="letter-element">—</p>
+        <h2 id="letter-char">—</h2>
+        <p class="hp-jamo" id="letter-jamo">—</p>
+      </header>
+      <dl class="hanja-table" id="letter-table"></dl>
+      <p class="hp-desc" id="letter-desc"></p>
+      <div class="seal">正音</div>
+    </aside>
+  </div>
+
+  <!-- 우하단 방위 표시기 (컴퍼스) -->
+  <div id="compass-hud" class="hidden">
+    <canvas id="compass-canvas" width="90" height="90"></canvas>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

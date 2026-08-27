@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>한글 이름 추상화</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;600&family=Space+Mono&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+
+<body>
+
+  <header id="topbar">
+    <div class="brand">
+      <h1>한글 이름 추상화</h1>
+    </div>
+    <nav class="menu">
+      <div class="dropdown">
+        <button class="navlink" id="btn-system">음절 <span class="arrow">▼</span></button>
+        <div class="dropdown-content" id="dropdown-words"></div>
+      </div>
+      <div class="dropdown">
+        <button class="navlink" id="btn-cluster">어절 <span class="arrow">▼</span></button>
+        <div class="dropdown-content" id="dropdown-clusters"></div>
+      </div>
+      <button class="navlink" id="btn-galaxy">문장</button>
+    </nav>
+  </header>
+
+  <!-- 우중앙 컨트롤 패널 -->
+  <div id="right-controls">
+    <button class="navlink" id="btn-toggle-stars" style="font-size: 11px; padding: 6px 12px; opacity: 1.0;">배경</button>
+    <button class="navlink" id="btn-toggle-orbit" style="font-size: 11px; padding: 6px 12px; opacity: 1.0;">궤도</button>
+    <button class="navlink" id="btn-toggle-name" style="font-size: 11px; padding: 6px 12px; opacity: 1.0;">이름</button>
+  </div>
+
+  <div id="input-wrap">
+    <input id="nameInput" type="text" maxlength="40" value="김수환무. 거북이와 두루미" placeholder="문장을 입력하세요">
+  </div>
+
+  <div id="scene-container"></div>
+
+  <div id="scale-hud">
+    <p class="scale-label">현재 보고 있는 곳</p>
+    <p class="scale-name" id="scale-name">계</p>
+    <p class="scale-hint">스크롤 줌 · 우 드래그 이동 · 행성 클릭</p>
+  </div>
+
+  <footer id="timebar">
+    <div class="datetime" id="datetime">—</div>
+    <div class="transport">
+      <button class="tp-btn" id="tp-rewind" title="처음부터 다시 작도" aria-label="맨 뒤로">⟪</button>
+      <button class="tp-btn" id="tp-pause" title="일시정지" aria-label="일시정지">⏸</button>
+      <button class="tp-btn" id="tp-play" title="재생" aria-label="재생">▶</button>
+      <button class="tp-btn" id="tp-end" title="작도 완료" aria-label="맨 앞으로">⟫</button>
+    </div>
+  </footer>
+
+  <!-- 행성 클릭 → 자소 레터링 크롬 판 -->
+  <div id="letter-overlay" class="hidden">
+    <div id="letter-stage"></div>
+    <p id="letter-title">자소 행성</p>
+    <button id="letter-close" aria-label="close">✕</button>
+    <aside id="letter-panel">
+      <p class="eyebrow" id="letter-element">—</p>
+      <h2 id="letter-char">—</h2>
+      <p class="jamo" id="letter-jamo">—</p>
+      <p class="desc" id="letter-desc"></p>
+    </aside>
+  </div>
+
+  <!-- 우하단 방위 표시기 (컴퍼스) -->
+  <div id="compass-hud" class="hidden">
+    <canvas id="compass-canvas" width="90" height="90"></canvas>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

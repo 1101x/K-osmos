@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m http.server 8931)",
+      "Bash(mkdir -p \"/Users/1101x/Desktop/한글 이름 추상화/03 letter system/02 sample/textures\")",
+      "Bash(cp \"01 refer/wood.jpg\" \"01 refer/fire.jpg\" \"01 refer/metal.jpg\" \"01 refer/water.jpg\" \"02 sample/textures/\")",
+      "Bash(cp \"01 refer/soil2.png\" \"02 sample/textures/soil.png\")",
+      "Bash(pkill -f \"http.server 8932\")",
+      "Bash(python3 -m http.server 8933)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8933/index.html)",
+      "Bash(pkill -f \"http.server 8933\")",
+      "Bash(cp js/main.js /tmp/_c.mjs)",
+      "Bash(node --check /tmp/_c.mjs)",
+      "Bash(rm -f /tmp/_c.mjs)",
+      "Bash(python3 -c \"import json;json.load\\(open\\('data/words.json'\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8933/data/words.json)",
+      "Bash(node --check /private/tmp/claude-501/-Users-1101x-Desktop----------/9d05f9d0-3769-44ff-b06d-dcd1768f2994/scratchpad/chk.mjs)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:8933/index.html\")",
+      "Bash(curl -s \"http://localhost:8933/data/words.json\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8933/js/main.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8933/index.html)",
+      "Bash(cp -R galaxy_v4 galaxy_v5)",
+      "Bash(rm -f galaxy_v5/.DS_Store)",
+      "Bash(node --check js/main.js)",
+      "Bash(cp js/main.js /tmp/mjs_check.mjs)",
+      "Bash(node --check /tmp/mjs_check.mjs)",
+      "Bash(rm -f /tmp/mjs_check.mjs)"
+    ]
+  }
+}
