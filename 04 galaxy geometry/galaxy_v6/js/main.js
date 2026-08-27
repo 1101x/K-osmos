@@ -8,153 +8,23 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* ═════════════════════════════════════════════════════════════
-   코드북 — 00 mater/codeBook_v1.md
+   코드북 — 훈민정음 제자원리 · 오행 · 음양 (별도 파일)
 ═════════════════════════════════════════════════════════════ */
-const JAMO = {
-  'ㄱ': [0, 0, 0], 'ㅋ': [0, 1, 0], 'ㄲ': [0, 0, 1],
-  'ㄴ': [1, 0, 0], 'ㄷ': [1, 1, 0], 'ㅌ': [1, 2, 0], 'ㄸ': [1, 1, 1], 'ㄹ': [1, 3, 0],
-  'ㅁ': [2, 0, 0], 'ㅂ': [2, 1, 0], 'ㅍ': [2, 2, 0], 'ㅃ': [2, 1, 1],
-  'ㅅ': [3, 0, 0], 'ㅈ': [3, 1, 0], 'ㅊ': [3, 2, 0], 'ㅆ': [3, 0, 1], 'ㅉ': [3, 1, 1],
-  'ㅇ': [4, 0, 0], 'ㅎ': [4, 1, 0]
-};
-/* ═══ 오행 표 — 오행 하나에 대한 모든 것을 여기 한 줄에 모은다 ═══
-   순서 = 오행 인덱스(0木 1火 2土 3金 4水). JAMO의 element 값이 이 인덱스다.
-   col   : 궤도 라인 · 라벨 · 파편/먼지 입자
-   trail : 행성 꼬리(잔상). 가산 6겹에서도 색이 유지되도록 진한 톤
-           (검정 오행은 가산합성 특성상 짙은 남빛으로 표현)
-   accent: 자소 레터링 화면의 조명 색 (0x… 형식 — THREE.PointLight용)
-   tint  : 행성 표면 색 (회색 지형맵에 셰이더에서 곱함)
-   glow  : 표면 자체발광 — 어두운 오행일수록 올려서 배경에 안 묻히게
-   churn : 표면이 이글거리는 세기 (0이면 정지) */
-const EL = [
-  {
-    h: '木', accent: 0x45dbde, ko: '목', name: '나무',
-    col: '#5aa1d3ff', trail: '#4fbbc3ff',
-    tex: 'gray_mok.jpg', tint: '#5c9ebfff', glow: 0.10, churn: 1.0, latin: 'WOOD',
-    sound: '牙音', soundKo: '어금닛소리', shape: '象舌根閉喉之形', shapeKo: '혀뿌리가 목구멍을 닫는 꼴',
-    dir: '東', dirKo: '동', season: '春', seasonKo: '봄', ohbang: '靑', ohbangKo: '푸름',
-    god: '靑龍', godKo: '청룡', virtue: '仁', virtueKo: '어짊', ink: '#1d5c86',
-    trait: '곧게 뻗어 자라는 기운이니, 너그럽고 어질다.',
-  },
-  {
-    h: '火', accent: 0xe06055, ko: '화', name: '불',
-    col: '#e06055', trail: '#d8352a',
-    /* M형 항성 표면(입상반) — 행성이 아니라 타는 표면이라 발광이 높다 */
-    tex: 'gray_hwa.jpg', tint: '#ff6a42', glow: 0.38, churn: 1.8, latin: 'FIRE',
-    sound: '舌音', soundKo: '혓소리', shape: '象舌附上腭之形', shapeKo: '혀가 윗잇몸에 붙는 꼴',
-    dir: '南', dirKo: '남', season: '夏', seasonKo: '여름', ohbang: '赤', ohbangKo: '붉음',
-    god: '朱雀', godKo: '주작', virtue: '禮', virtueKo: '예의', ink: '#9c2f22',
-    trait: '위로 타오르는 기운이니, 밝고 예를 안다.',
-  },
-  {
-    h: '土', accent: 0xf0cf3f, ko: '토', name: '흙',
-    col: '#f0cf3f', trail: '#fce898ff',
-    tex: 'gray_to.jpg', tint: '#ffe570ff', glow: 0.10, churn: 1.1, latin: 'EARTH',
-    sound: '脣音', soundKo: '입술소리', shape: '象口形', shapeKo: '입의 꼴',
-    dir: '中央', dirKo: '가운데', season: '長夏', seasonKo: '늦여름', ohbang: '黃', ohbangKo: '누름',
-    god: '黃龍', godKo: '황룡', virtue: '信', virtueKo: '믿음', ink: '#7d5f0e',
-    trait: '가운데서 두루 품는 기운이니, 두텁고 미덥다.',
-  },
-  {
-    h: '金', accent: 0xdfe6f2, ko: '금', name: '쇠',
-    col: '#efdfc0', trail: '#f2eedfff',
-    /* 白 — 순백이면 하이라이트가 날아가므로 살짝 따뜻한 백 */
-    tex: 'gray_geum.jpg', tint: '#f4efe4', glow: 0.06, churn: 0.7, latin: 'METAL',
-    sound: '齒音', soundKo: '잇소리', shape: '象齒形', shapeKo: '이의 꼴',
-    dir: '西', dirKo: '서', season: '秋', seasonKo: '가을', ohbang: '白', ohbangKo: '흼',
-    god: '白虎', godKo: '백호', virtue: '義', virtueKo: '의로움', ink: '#4b4136',
-    trait: '거두어 굳히는 기운이니, 굳세고 의롭다.',
-  },
-  {
-    h: '水', accent: 0x6fa8ff, ko: '수', name: '물',
-    col: '#b2c0d7ff', trail: '#3d476bff',
-    /* 黑 — 검정에 가장 가깝게, 대신 발광을 올려 보이는 한계까지만 */
-    tex: 'gray_su.jpg', tint: '#3b4658', glow: 0.34, churn: 0.9, latin: 'WATER',
-    sound: '喉音', soundKo: '목구멍소리', shape: '象喉形', shapeKo: '목구멍의 꼴',
-    dir: '北', dirKo: '북', season: '冬', seasonKo: '겨울', ohbang: '黑', ohbangKo: '검음',
-    god: '玄武', godKo: '현무', virtue: '智', virtueKo: '슬기', ink: '#1b2a40',
-    trait: '아래로 스며드는 기운이니, 깊고 슬기롭다.',
-  },
-];
-const OL = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
-const VL = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'];
-const CL = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
-const CODA_PARTS = {
-  'ㄳ': ['ㄱ', 'ㅅ'], 'ㄵ': ['ㄴ', 'ㅈ'], 'ㄶ': ['ㄴ', 'ㅎ'], 'ㄺ': ['ㄹ', 'ㄱ'], 'ㄻ': ['ㄹ', 'ㅁ'],
-  'ㄼ': ['ㄹ', 'ㅂ'], 'ㄽ': ['ㄹ', 'ㅅ'], 'ㄾ': ['ㄹ', 'ㅌ'], 'ㄿ': ['ㄹ', 'ㅍ'], 'ㅀ': ['ㄹ', 'ㅎ'], 'ㅄ': ['ㅂ', 'ㅅ']
-};
-
-function decompose(ch) {
-  const c = ch.charCodeAt(0) - 0xAC00;
-  if (c < 0 || c > 11171) return null;
-  return { onset: OL[Math.floor(c / 588)], vowel: VL[Math.floor((c % 588) / 28)], coda: CL[c % 28] };
-}
-
-/* ═════════════════════════════════════════════════════════════
-   02 geometry_v13 — 자소 궤도
-   자음 = 오행별 수식 곡선 (하이포/장미/리사주/에피)
-   모음 = 원 궤도. 값은 띠(地·人)와 위성(天)이 갖는다
-═════════════════════════════════════════════════════════════ */
-const PI2 = Math.PI / 2;
-const CURVE = {
-  /* 木 */ 'ㄱ': { f: 'hypo', A: 2, B: 3, p: 2, q: 1 }, 'ㅋ': { f: 'hypo', A: 4, B: 3, p: 4, q: 1 },
-  /* 火 */ 'ㄴ': { f: 'rose', k: 3 }, 'ㄷ': { f: 'rose', k: 2 }, 'ㅌ': { f: 'rose', k: 5 }, 'ㄹ': { f: 'rose', k: 7 },
-  /* 土 */ 'ㅁ': { f: 'liss', a: 2, b: 1, d: 0 }, 'ㅂ': { f: 'liss', a: 3, b: 1, d: PI2 }, 'ㅍ': { f: 'liss', a: 3, b: 2, d: PI2 },
-  /* 金 */ 'ㅅ': { f: 'hypo', A: 4, B: 3, p: 2, q: 1 }, 'ㅈ': { f: 'hypo', A: 6, B: 3, p: 3, q: 1 }, 'ㅊ': { f: 'hypo', A: 5, B: 3, p: 5, q: 3 },
-  /* 水 */ 'ㅇ': { f: 'epi', A: 3, B: 3, p: 3, q: 1 }, 'ㅎ': { f: 'epi', A: 5, B: 6, p: 5, q: 3 },
-};
-const FAMKO = { hypo: '하이포트로코이드', rose: '장미곡선', liss: '리사주곡선', epi: '에피트로코이드' };
-/* 병서 — 궤도는 기본자와 같다. 표기만 쌍둥이 행성 */
-const TWIN = { 'ㄲ': 'ㄱ', 'ㄸ': 'ㄷ', 'ㅃ': 'ㅂ', 'ㅆ': 'ㅅ', 'ㅉ': 'ㅈ' };
-/* 모음 천지인 필순 — 0=天(·) 1=地(ㅡ) 2=人(ㅣ) */
-const VSEQ = {
-  'ㅏ': [2, 0], 'ㅑ': [2, 0, 0], 'ㅓ': [0, 2], 'ㅕ': [0, 0, 2],
-  'ㅗ': [0, 1], 'ㅛ': [0, 0, 1], 'ㅜ': [1, 0], 'ㅠ': [1, 0, 0],
-  'ㅐ': [2, 0, 2], 'ㅒ': [2, 0, 0, 2], 'ㅔ': [0, 2, 2], 'ㅖ': [0, 0, 2, 2],
-  'ㅚ': [0, 1, 2], 'ㅟ': [1, 0, 2], 'ㅢ': [1, 2],
-  'ㅘ': [0, 1, 2, 0], 'ㅝ': [1, 0, 0, 2],
-  'ㅙ': [0, 1, 2, 0, 2], 'ㅞ': [1, 0, 0, 2, 2],
-  'ㅡ': [1], 'ㅣ': [2],
-};
-const YANG = new Set(['ㅏ', 'ㅑ', 'ㅗ', 'ㅛ', 'ㅐ', 'ㅒ', 'ㅚ', 'ㅘ', 'ㅙ']);
-const YIN = new Set(['ㅓ', 'ㅕ', 'ㅜ', 'ㅠ', 'ㅔ', 'ㅖ', 'ㅟ', 'ㅝ', 'ㅞ']);
-const SAMH = ['天', '地', '人'];
-/* 모음은 오행이 아니라 음양을 따른다 — EL과 같은 칸을 가진 여섯 번째 항목 격.
-   달 텍스처를 쓰며 위성도 같은 재질을 공유한다 */
-const VOWEL_EL = {
-  h: '中', accent: 0x9a9a9aff, ko: '중성', name: '달',
-  col: '#3d3d3dff', trail: '#505050ff',
-  tex: '2k_moon.jpg', tint: '#505050ff', glow: 0.08, churn: 0.35, latin: 'MOON',
-  sound: '中聲', soundKo: '가운뎃소리', shape: '取象於天地人', shapeKo: '하늘·땅·사람에서 꼴을 취함',
-  dir: '中', dirKo: '가운데', season: '四時', seasonKo: '네 철', ohbang: '玄', ohbangKo: '가믈',
-  god: '太極', godKo: '태극', virtue: '和', virtueKo: '어우러짐', ink: '#3a3226',
-  trait: '음양이 갈마드는 기운이니, 하늘과 땅 사이에 사람이 선다.',
-};
-
-/* ═══ 훈민정음 제자해(制字解) — 오음(五音)은 EL 인덱스와 그대로 맞물린다 ═══
-   0牙木 · 1舌火 · 2脣土 · 3齒金 · 4喉水. JAMO의 stroke 값이 가획 횟수다 */
-const IRR = { 'ㄹ': ['半舌音', '반혓소리'] };
-function jejaText(g) {
-  const [el, stroke, tense] = JAMO[g] || [4, 0, 0];
-  const irr = IRR[g];
-  return {
-    sound: irr ? irr[0] : EL[el].sound,
-    soundKo: irr ? irr[1] : EL[el].soundKo,
-    rule: irr ? '異體字' : tense ? '各自竝書' : stroke ? '加畫字' : '象形 基本字',
-    ruleKo: irr ? '꼴을 달리 한 글자' : tense ? '나란히 써서 된소리를 이룸'
-      : stroke ? `기본자에 획을 ${stroke}번 더함` : EL[el].shapeKo,
-  };
-}
-/* 중성 제자 — 기본자 ㆍㅡㅣ · 초출 ㅗㅏㅜㅓ · 재출 ㅛㅑㅠㅕ · 나머지 합용 */
-const VBASE = new Set(['ㅡ', 'ㅣ']);
-const VFIRST = new Set(['ㅗ', 'ㅏ', 'ㅜ', 'ㅓ']);
-const VSECOND = new Set(['ㅛ', 'ㅑ', 'ㅠ', 'ㅕ']);
+import {
+  JAMO, EL, OL, VL, CL, CODA_PARTS, decompose,
+  CURVE, FAMKO, TWIN, VSEQ, YANG, YIN, SAMH, VOWEL_EL,
+  IRR, jejaText, VBASE, VFIRST, VSECOND, FLIP_TWICE,
+  eqText, curveTurns, nameReading, OHBANG_KO,
+} from './codebook.js';
 
 /* 색 표기 정규화 — THREE.Color는 8자리 hex(#rrggbbaa)도, 알파가 붙은 32비트 숫자도
    읽지 못하고 흰색으로 떨어진다. 색상 피커가 뱉는 값을 그대로 붙여 넣어도 되도록
    THREE로 넘어가는 길목에서 알파를 잘라낸다. CSS 쪽은 8자리를 이해하므로 손대지 않는다 */
 const C3 = (h) => new THREE.Color(typeof h === 'string' ? h.slice(0, 7) : (h & 0xffffff));
 
+/* ═════════════════════════════════════════════════════════════
+   02 geometry_v13 — 자소 궤도 기하 계산
+═════════════════════════════════════════════════════════════ */
 const NS = 1200;   /* 궤도 샘플 수 */
 const R0 = 30;     /* 기본 궤도 반지름 */
 const WANG = 0.10; /* 원(모음) 궤도 각속도 */
@@ -163,11 +33,6 @@ const SPEED = WANG * 2 * Math.PI * R0;  /* 모든 행성 공통 선속도 */
 function rng(seed) {
   let s = seed >>> 0 || 1;
   return () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) % 1e6) / 1e6; };
-}
-function curveTurns(g) {
-  const C = CURVE[TWIN[g] || g];
-  if (!C) return 1;
-  return (C.f === 'hypo' || C.f === 'epi') ? C.q : 1;
 }
 function jamoCurve(g, a) {
   const C = CURVE[TWIN[g] || g] || CURVE['ㅇ'];
@@ -198,14 +63,6 @@ function jamoCurve(g, a) {
   if (wind < -0.01) P.reverse();
   return P.map(([x, y]) => [x / mx * a, y / mx * a]);
 }
-function eqText(g) {
-  const C = CURVE[TWIN[g] || g];
-  if (!C) return '';
-  const m = C.q === 1 ? C.p : `${C.p}/${C.q}`;
-  if (C.f === 'rose') return `r = cos(${C.k}t)`;
-  if (C.f === 'liss') return `x = sin(${C.a}t${C.d ? ' + π/2' : ''}) , y = sin(${C.b}t)`;
-  return `x = ${C.A}cos t ${C.f === 'hypo' ? '+' : '−'} ${C.B}cos(${m}t)`;
-}
 function rotate2(P, rot) {
   const c = Math.cos(rot), s = Math.sin(rot);
   return P.map(([x, y]) => [x * c - y * s, x * s + y * c]);
@@ -232,7 +89,6 @@ function arcResample(pts) {
   }
   return { pts: out, len };
 }
-const FLIP_TWICE = new Set(['ㅂ', 'ㅍ', 'ㅊ', 'ㅋ']);
 function consDir(g, el, dir) {
   if (el === 1 || el === 3) dir = -dir;
   if (FLIP_TWICE.has(TWIN[g] || g)) dir = -dir;
@@ -244,7 +100,7 @@ function consOrbit(g, dir, kind, R) {
   dir = consDir(g, el, dir);
   const rs = arcResample(reindex(rotate2(jamoCurve(g, R0), R() * Math.PI * 2), 0, dir));
   const C = CURVE[TWIN[g] || g];
-  const baseSize = 2;
+  const baseSize = 4;
   return {
     glyph: g, kind, type: 'cons', el, col: EL[el].col, trail: EL[el].trail,
     pts: rs.pts, dir, tense, sz: kind === '초성' ? baseSize : baseSize * 0.8,
@@ -265,7 +121,7 @@ function vowelOrbit(v, dir) {
   const dirLabel = YANG.has(v) ? '陽 시계' : YIN.has(v) ? '陰 반시계' : (dir > 0 ? '中 시계' : '中 반시계');
   return {
     glyph: v, kind: '중성', type: 'vowel', el: -1, col: VOWEL_EL.col, trail: VOWEL_EL.trail,
-    pts: reindex(raw, 0, dir), dir, tense: 0, sz: 1,
+    pts: reindex(raw, 0, dir), dir, tense: 0, sz: 2,
     w: SPEED / (2 * Math.PI * R0),
     moons: cnt[0], beltH: cnt[1], beltV: cnt[2], seq, yang,
     desc: `${seq.map(x => SAMH[x]).join('')} · 위성${cnt[0]} 가로띠${cnt[1]} 세로띠${cnt[2]} · ${dirLabel}`,
@@ -290,7 +146,8 @@ function systemFor(ch) {
 const container = document.getElementById('scene-container');
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000004);
+/* 푸른 우주 대신 먹(墨)빛 — 밤하늘보다 벼루에 가까운 검정 */
+scene.background = new THREE.Color(0x050302);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 300000);
 camera.position.set(0, 46, 78);
@@ -314,7 +171,7 @@ controls.dampingFactor = 0.06;
 controls.minDistance = 4;
 controls.maxDistance = 90000;
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.32));
+scene.add(new THREE.AmbientLight(0xfff4e0, 0.32));
 /* 계마다 점광원을 두면 광원 수가 음절 수만큼 늘어난다 → 전역 평행광 하나로 대신한다 */
 const sunLight = new THREE.DirectionalLight(0xfff2d5, 2.4);
 sunLight.position.set(1, 0.9, 0.6);
@@ -441,7 +298,8 @@ function makeStarField({ count, radiusMin, radiusMax, sizeMin, sizeMax, palette,
   varying vec3 vColor;
   varying float vAlpha;
   void main() {
-    vec4 tex = texture2D(uMap, gl_PointCoord);
+    /* gl_PointCoord(y 아래로)와 flipY 텍스처가 어긋나 글자가 뒤집히므로 v를 뒤집어 고정 */
+    vec4 tex = texture2D(uMap, vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y));
     gl_FragColor = vec4(vColor, 1.0) * tex * vAlpha * uAlpha;
   }`,
     transparent: true,
@@ -523,7 +381,7 @@ const starsCool = makeStarField({
   count: 15000,
   radiusMin: 500, radiusMax: 1900,
   sizeMin: 3, sizeMax: 13,
-  palette: [0xffffff, 0xbcd2ff, 0x8fb0ff, 0xe8e8ff],
+  palette: [0xfffdf4, 0xf0e8d6, 0xd9cfb8, 0xfff2da],
   twinkleAmp: 0.35,
   atten: 0.25,
 });
@@ -582,7 +440,7 @@ function drawGlyph(ctx, g, x, y, px) {
     ctx.fill();
     return;
   }
-  ctx.font = `700 ${px}px "Noto Serif KR", "Nanum Myeongjo", serif`;
+  ctx.font = `300 ${px}px "Soonbatang", "SunBatang", serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(g, x, y);
@@ -599,54 +457,71 @@ function glyphCanvasTexture(w, h, draw) {
   return t;
 }
 
-const glyphShellTex = {};
-function glyphShellTexture(glyph) {
-  if (!glyphShellTex[glyph]) {
-    const W = 1024, H = 512;
-    glyphShellTex[glyph] = glyphCanvasTexture(W, H, (ctx) => {
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#ffffff';
-      for (let k = 0; k < 3; k++) drawGlyph(ctx, glyph, W * (k + 0.5) / 3, H * 0.5, H * 0.66);
+/* 행성 본체 자리에 자소를 직접 띄운다 — 먹 번짐처럼 은은히 빛나는 붓글씨 빌보드.
+   자음은 오방색, 모음은 한지빛 */
+const glyphBillTex = {};
+function glyphBillboardTexture(glyph, color) {
+  const key = glyph + color;
+  if (!glyphBillTex[key]) {
+    const S = 256;
+    glyphBillTex[key] = glyphCanvasTexture(S, S, (ctx) => {
+      ctx.clearRect(0, 0, S, S);
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = S * 0.11;
+      drawGlyph(ctx, glyph, S / 2, S / 2, S * 0.56);
+      ctx.shadowBlur = 0;
+      drawGlyph(ctx, glyph, S / 2, S / 2, S * 0.56);
     });
   }
-  return glyphShellTex[glyph];
+  return glyphBillTex[key];
 }
-/* 행성보다 살짝 큰 껍질에 자소를 얹는다 — 오방색으로 물들여 각인처럼 */
-function makeGlyphShell(o, radius) {
-  const base = o.type === 'vowel' ? new THREE.Color('#f2e8d2') : C3(EL[o.el].col);
-  return new THREE.Mesh(
-    new THREE.SphereGeometry(radius * 1.015, 48, 48),
-    new THREE.MeshBasicMaterial({
-      map: glyphShellTexture(o.glyph),
-      color: base.lerp(new THREE.Color(0xffffff), 0.35),
-      transparent: true, depthWrite: false,
-    }));
+function makeGlyphBillboard(o, radius) {
+  const color = o.type === 'vowel' ? '#f2e8d2' : o.col;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glyphBillboardTexture(o.glyph, color),
+    transparent: true, depthWrite: false,
+  }));
+  sp.scale.setScalar(radius * 4);
+  return sp;
 }
 
-/* 별밭에 심는 자모 — 훈민정음 기본자 여덟(ㄱㄴㅁㅅㅇ · ㆍㅡㅣ) */
-const SEED_JAMO = ['ㄱ', 'ㄴ', 'ㅁ', 'ㅅ', 'ㅇ', 'ㆍ', 'ㅡ', 'ㅣ'];
+/* 별밭에 심는 자모 — 단자음 14 · 단모음 10 */
+const SEED_JAMO = [
+  'ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ',
+  'ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ',
+];
+/* 자모 별 총량 = 배경 별(warm 9000 + cool 15000)의 35% */
+const JAMO_STAR_COUNT = Math.round((9000 + 15000) * 0.15 / SEED_JAMO.length);
 function makeGlyphSprite(g) {
   const S = 128;
   return glyphCanvasTexture(S, S, (ctx) => {
     ctx.clearRect(0, 0, S, S);
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(206,224,255,0.95)';
-    ctx.shadowBlur = S * 0.15;
+    ctx.shadowBlur = S * 0.35;
     drawGlyph(ctx, g, S / 2, S / 2, S * 0.62);
     ctx.shadowBlur = 0;
   });
 }
-const jamoStars = new THREE.Group();
-SEED_JAMO.forEach(g => {
-  jamoStars.add(makeStarField({
-    count: 52,
+/* 글리프 텍스처는 성단마다 다시 그릴 것 없이 한 벌만 만들어 돌려 쓴다 */
+const jamoSpriteCache = {};
+const jamoSprite = (g) => (jamoSpriteCache[g] || (jamoSpriteCache[g] = makeGlyphSprite(g)));
+
+/* 성단 하나치 자모 별밭 — 자소마다 한 필드씩. 성단 어디에서 보든 같은 하늘이 되도록
+   원점 성단과 문장 성단이 이 함수를 함께 쓴다 */
+function jamoFields() {
+  return SEED_JAMO.map(g => makeStarField({
+    count: JAMO_STAR_COUNT,
     radiusMin: 520, radiusMax: 1820,
-    sizeMin: 34, sizeMax: 88,
+    sizeMin: 20, sizeMax: 80,
     palette: [0xe6ecff, 0xffeec4, 0xcfe0ff, 0xffffff],
-    twinkleAmp: 0.42, atten: 0.25, maxPx: 240,
-    sprite: makeGlyphSprite(g),
+    twinkleAmp: 0.42, atten: 0.25, maxPx: 100,
+    sprite: jamoSprite(g),
   }));
-});
+}
+const jamoStars = new THREE.Group();
+jamoFields().forEach(f => jamoStars.add(f));
 scene.add(jamoStars);
 
 /* ---------------- 태양 글로우 스프라이트 (01 그대로 · 텍스처 공유) 항성 빛 크기 깁노 26 ---------------- */
@@ -683,9 +558,8 @@ function makeGlowSprite(size) {
 ═════════════════════════════════════════════════════════════ */
 /* 행성 재질 사양 = 오행 표(EL) 그 자체. 자음은 오행, 모음은 달 */
 const planetSpec = (o) => (o.type === 'vowel' ? VOWEL_EL : EL[o.el]);
-const planetTex = (o) => planetSpec(o).tex;
 const SUN_RADIUS = 3.4;
-const MAX_ORBIT = 35;         /* 가장 큰 궤적 반경 (행성·항성이 상대적으로 커 보이게 축소) 궤도 지름 */
+const MAX_ORBIT = 55;         /* 가장 큰 궤적 반경 (행성·항성이 상대적으로 커 보이게 축소) 궤도 지름 */
 const NPT = NS;               /* 궤적 샘플 수 = v13 궤도 샘플 수 */
 const REVEAL_DUR = 6;         /* 궤도 작도 6초 */
 
@@ -750,17 +624,33 @@ function planetMaterial(o) {
   return planetMatCache[s.tex];
 }
 
-/* 성단 뷰 계 마커용 행성 재질 — 먼 거리에서도 보이게 무광원 */
-const markerMatCache = {};
-function markerMaterial(o) {
-  const s = planetSpec(o);
-  if (!markerMatCache[s.tex]) {
-    /* 마커는 광원이 없으므로 어두운 오행(水)은 색을 들어올려 보이게 한다 */
-    const c = C3(s.tint);
-    if (s.glow > 0.2) c.lerp(new THREE.Color('#ffffff'), 0.45);
-    markerMatCache[s.tex] = new THREE.MeshBasicMaterial({ map: loadTex(s.tex), color: c });
+/* 띄어쓰기(공백) → 어절(성단) / 음절 → v13 자소 궤도(계) */
+function parseText(text) {
+  const rawWords = text.trim().split(/\s+/).filter(Boolean);
+  const out = [];
+  for (const w of rawWords) {
+    const sylls = [...w].map(systemFor).filter(Boolean);
+    if (sylls.length) out.push({ word: sylls.map(s => s.char).join(''), sylls });
   }
-  return markerMatCache[s.tex];
+  return out;
+}
+
+/* 어절 성단 배치 — 우리은하 원반 내 랜덤 좌표 (첫 성단 = 태양 자리 = 원점) */
+function placeClusters(n) {
+  const locals = [SUN_LOCAL.clone()];
+  for (let i = 1; i < n; i++) {
+    let p, tries = 0;
+    do {
+      const r = 3500 + Math.random() * 11000;
+      const th = Math.random() * Math.PI * 2;
+      p = new THREE.Vector3(Math.cos(th) * r, gauss() * 420, Math.sin(th) * r);
+      tries++;
+    } while (locals.some(q => q.distanceTo(p) < 7500) && tries < 200);
+    locals.push(p);
+  }
+  return locals.map((l, i) => i === 0
+    ? new THREE.Vector3(0, 0, 0)
+    : l.applyEuler(GALAXY_TILT).add(galaxy.position));
 }
 
 /* 단위 원 (XZ) — 작도용 궤도원/자기원 공유 지오메트리 */
@@ -774,7 +664,7 @@ const unitCircleGeo = (() => {
 })();
 
 /* 모음 띠 — geometry_v13 drawVowelPlanet 규칙: 地(ㅡ)=가로띠 · 人(ㅣ)=세로띠 */
-function makeBelt(mesh, radius, inner, outer, rotX, rotZ) {
+function makeBelt(mesh, radius, inner, outer, rotX, rotZ, tint = '#e8dcc2') {
   const ringGeo = new THREE.RingGeometry(radius * inner, radius * outer, 96);
   const uv = ringGeo.attributes.uv;
   const pos3 = ringGeo.attributes.position;
@@ -785,7 +675,7 @@ function makeBelt(mesh, radius, inner, outer, rotX, rotZ) {
     uv.setXY(i, t, 0.5);
   }
   const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
-    map: loadTex('2k_saturn_ring_alpha.png'), side: THREE.DoubleSide,
+    map: loadTex('2k_saturn_ring_alpha.png'), side: THREE.DoubleSide, color: C3(tint),
     transparent: true, opacity: 0.9, depthWrite: false,
   }));
   ring.rotation.set(rotX, 0, rotZ);
@@ -805,6 +695,12 @@ function makeSaturnRing(mesh, radius, o) {
   }
 }
 
+/* 자음 천체 — 본체 없이 기울지 않은 正圓 링 띠만. 오방색으로 물들인다.
+   병서(쌍둥이)는 궤도면 자체를 5° 틀어 2겹으로 겹친다 — 띠는 한 겹 */
+function makeConsRing(group, radius, o) {
+  makeBelt(group, radius, 1.5, 2.3, -Math.PI / 2, 0, o.col);
+}
+
 /* 행성 거리 랜덤 배치 — 겹치지 않게 (첫 계는 원점) 음절 거리 */
 function placeSystems(n, k = 1) {
   const MIN_SEP = MAX_ORBIT * 2 * k;
@@ -821,39 +717,6 @@ function placeSystems(n, k = 1) {
     pts.push(p);
   }
   return pts;
-}
-
-/* ". "(온점+띄어쓰기) → 문장 / 공백 → 어절 / 음절 → v13 자소 궤도 */
-function parseText(text) {
-  const sentences = text.split(/\.\s+/).map(s => s.replace(/[.\s]+$/, '').trim()).filter(Boolean);
-  const out = [];
-  for (const sent of sentences) {
-    const words = [];
-    for (const w of sent.split(/\s+/)) {
-      const sylls = [...w].map(systemFor).filter(Boolean);
-      if (sylls.length) words.push({ word: sylls.map(s => s.char).join(''), sylls });
-    }
-    if (words.length) out.push(words);
-  }
-  return out;
-}
-
-/* 문장 성단 배치 — 우리은하 원반 내 랜덤 좌표 (첫 성단 = 태양 자리 = 원점) */
-function placeClusters(n) {
-  const locals = [SUN_LOCAL.clone()];
-  for (let i = 1; i < n; i++) {
-    let p, tries = 0;
-    do {
-      const r = 3500 + Math.random() * 11000;
-      const th = Math.random() * Math.PI * 2;
-      p = new THREE.Vector3(Math.cos(th) * r, gauss() * 420, Math.sin(th) * r);
-      tries++;
-    } while (locals.some(q => q.distanceTo(p) < 7500) && tries < 200);
-    locals.push(p);
-  }
-  return locals.map((l, i) => i === 0
-    ? new THREE.Vector3(0, 0, 0)
-    : l.applyEuler(GALAXY_TILT).add(galaxy.position));
 }
 
 /* 음절 궤적면 기울임 — 세로축 기준 노드선을 n등분 + 랜덤 경사
@@ -884,8 +747,8 @@ function makeCompass(group) {
   return { mat };
 }
 
-let clusters = [];         /* 문장 — {index,pos,firstWord,deco,beacon,beaconLabel,cF,systems:[i]} */
-let words = [];            /* 어절 — {index,clusterIndex,word,pos,systems:[i]} */
+let clusters = [];         /* 어절 성단 — {index,pos,word,deco,beacon,beaconLabel,cF,systems:[i]} */
+let words = [];            /* 어절 성단 참조 (동일) */
 let systems = [];          /* 음절 계 — {index,wordIndex,clusterIndex,char,pos,group,star,jamos:[...]} */
 let universe = null;       /* 모든 성단·계를 담는 그룹 */
 let curText = '';
@@ -916,26 +779,26 @@ function makeLabelEl(html, color, onClick) {
 function buildAll(text) {
   disposeUniverse();
 
-  const sentences = parseText(text);
-  if (!sentences.length) return;
+  const wordList = parseText(text);
+  if (!wordList.length) return;
 
   /* v13 곡선은 모두 rmax = R0 으로 정규화되어 있다 → 모든 계 공통 스케일 */
   const SCALE = MAX_ORBIT / R0;
 
   universe = new THREE.Group();
 
-  const clusterPos = placeClusters(sentences.length);
+  const clusterPos = placeClusters(wordList.length);
 
-  sentences.forEach((wordList, ci) => {
-    const cpos = clusterPos[ci];
-    const cluster = {
-      index: ci, pos: cpos, firstWord: wordList[0].word,
+  wordList.forEach((wd, wi) => {
+    const cpos = clusterPos[wi];
+    const wordEntry = {
+      index: wi, clusterIndex: wi, wordIndex: wi, pos: cpos, firstWord: wd.word, word: wd.word,
       deco: null, beacon: null, beaconLabel: null, cF: 1, systems: [],
     };
 
     /* --- 성단 별 배경 (원점 성단은 기존 01 배경이 담당)
        원점과 동일한 4종 구성: warm 9000 + cool 15000 + core 9000 + stream 7000 --- */
-    if (ci > 0) {
+    if (wi > 0) {
       const deco = new THREE.Group();
       deco.add(makeStarField({
         count: 9000, radiusMin: 420, radiusMax: 1700, sizeMin: 8, sizeMax: 30,
@@ -978,200 +841,223 @@ function buildAll(text) {
           };
         },
       }));
+      /* 자모 별밭 — 원점 성단의 jamoStars와 같은 구성 */
+      jamoFields().forEach(f => deco.add(f));
       deco.position.copy(cpos);
       deco.children.forEach(f => { f.visible = showStars; });
       universe.add(deco);
-      cluster.deco = deco;
+      wordEntry.deco = deco;
     }
 
     /* --- 은하 뷰 성단 표지 (광점 + 라벨) --- */
     const beacon = makeGlowSprite(2400);
     beacon.position.copy(cpos);
     universe.add(beacon);
-    cluster.beacon = beacon;
+    wordEntry.beacon = beacon;
 
     const beaconLabel = makeLabelEl(
-      `<span class="ring-icon" style="color:#cfd8ff"></span><span class="name">${cluster.firstWord}${wordList.length > 1 ? '…' : ''} 星域</span>`,
-      null, () => flyToCluster(ci));
+      `<span class="ring-icon" style="color:#cfd8ff"></span><span class="name">${wd.word} 星團</span>`,
+      null, () => flyToWord(wi));
     beaconLabel.element.classList.add('cluster-label');
     beaconLabel.position.copy(cpos);
     universe.add(beaconLabel);
-    cluster.beaconLabel = beaconLabel;
+    wordEntry.beaconLabel = beaconLabel;
 
-    /* --- 어절 = 성단 : 음절 간 거리의 3배로 배치 어절 거리 --- */
-    const wordPos = placeSystems(wordList.length, 3);
-    wordList.forEach((wd, wi) => {
-      const wIndex = words.length;
-      const wcenter = cpos.clone().add(wordPos[wi]);
-      const wordEntry = { index: wIndex, clusterIndex: ci, word: wd.word, pos: wcenter, systems: [] };
+    /* --- 어절 내 음절 = 계 (어절 성단 중심 주변에 배치 — 기존 대비 2배 거리) --- */
+    const sylPos = placeSystems(wd.sylls.length, 2);
+    wd.sylls.forEach((sd, si) => {
+      const sysIndex = systems.length;
+      const pos = cpos.clone().add(sylPos[si]);
+      const group = new THREE.Group();
+      group.position.copy(pos);
 
-      /* --- 음절 = 계 --- */
-      const sylPos = placeSystems(wd.sylls.length);
-      wd.sylls.forEach((sd, si) => {
-        const sysIndex = systems.length;
-        const pos = wcenter.clone().add(sylPos[si]);
-        const group = new THREE.Group();
-        group.position.copy(pos);
+      /* --- 항성 = 노란 발광만 (자소 그래픽 없음) --- */
+      const star = new THREE.Group();
+      star.add(makeGlowSprite(26));
+      star.visible = showSun;
+      group.add(star);
 
-        /* --- 항성 = 노란 발광만 (자소 그래픽 없음) 항성 빛 크기 --- */
-        const star = new THREE.Group();
-        star.add(makeGlowSprite(26));
-        star.visible = showSun;
-        group.add(star);
+      const sunLabel = makeLabelEl(
+        `<span class="ring-icon" style="color:#d8b551"></span><span class="name">${sd.char}계</span>`,
+        null, () => flyToSystem(sysIndex));
+      sunLabel.element.classList.add('sun-label');
+      group.add(sunLabel);
 
-        const sunLabel = makeLabelEl(
-          `<span class="ring-icon" style="color:#d8b551"></span><span class="name">${sd.char}界</span>`,
-          null, () => flyToSystem(sysIndex));
-        sunLabel.element.classList.add('sun-label');
-        group.add(sunLabel);
+      const sunOffLabel = makeLabelEl(
+        `<span class="sun-off-name">${sd.char}</span>`, null, () => flyToSystem(sysIndex));
+      sunOffLabel.element.classList.add('sun-off-label');
+      group.add(sunOffLabel);
 
-        const sunOffLabel = makeLabelEl(
-          `<span class="sun-off-name">${sd.char}</span>`, null, () => flyToSystem(sysIndex));
-        sunOffLabel.element.classList.add('sun-off-label');
-        group.add(sunOffLabel);
+      /* --- 오방 컴퍼스 (02 geometry_v3 UI) --- */
+      const compass = makeCompass(group);
 
-        /* --- 오방 컴퍼스 (02 geometry_v3 UI) --- */
-        const compass = makeCompass(group);
+      /* --- 성단 뷰 계 마커: 글로우 + 자소 행성 --- */
+      const marker = new THREE.Group();
+      marker.add(makeGlowSprite(560));
+      sd.orbits.forEach((o, j) => {
+        /* 성단 뷰 마커는 계 뷰 확대와 무관하게 제 크기를 지킨다 */
+        const mr = 46 * (o.sz / 3);
+        const mp = new THREE.Group();
+        mp.add(makeGlyphBillboard(o, mr));
+        if (o.type === 'vowel') makeSaturnRing(mp, mr, o);
+        else makeConsRing(mp, mr, o);
+        const a = j / sd.orbits.length * Math.PI * 2;
+        mp.position.set(Math.cos(a) * 210, 0, Math.sin(a) * 210);
+        marker.add(mp);
+      });
+      marker.scale.setScalar(0.001);
+      marker.visible = false;
+      group.add(marker);
 
-        /* --- 성단 뷰 계 마커: 글로우 + 자소 행성 --- */
-        const marker = new THREE.Group();
-        marker.add(makeGlowSprite(560));
-        sd.orbits.forEach((o, j) => {
-          const mr = 46 * (o.sz / 1.5);
-          const mp = new THREE.Mesh(new THREE.SphereGeometry(mr, 24, 24), markerMaterial(o));
-          mp.add(makeGlyphShell(o, mr));
-          const a = j / sd.orbits.length * Math.PI * 2;
-          mp.position.set(Math.cos(a) * 210, 0, Math.sin(a) * 210);
-          if (o.type === 'vowel') makeSaturnRing(mp, 46, o);
-          marker.add(mp);
+      /* --- 자소 → 기울인 궤도면 + 행성 (180°를 자소 수로 나눠 랜덤 배치) --- */
+      const tilts = syllableTilts(sd.orbits.length);
+      const jamos = [];
+      sd.orbits.forEach((o, j) => {
+        const jGroup = new THREE.Group();
+        jGroup.quaternion.copy(tilts[j]);
+        group.add(jGroup);
+
+        /* 궤적 (v13 곡선 → 기울인 평면) */
+        const trajArr = new Float32Array((NPT + 1) * 3);
+        o.pts.forEach(([x, y], k) => {
+          trajArr[k * 3] = x * SCALE; trajArr[k * 3 + 1] = 0; trajArr[k * 3 + 2] = y * SCALE;
         });
-        marker.scale.setScalar(0.001);
-        marker.visible = false;
-        group.add(marker);
+        const trajGeo = new THREE.BufferGeometry();
+        trajGeo.setAttribute('position', new THREE.BufferAttribute(trajArr, 3));
+        trajGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((NPT + 1) * 3), 3));
+        const trajMat = new THREE.LineBasicMaterial({
+          vertexColors: true, transparent: true, opacity: 0.9,
+          blending: THREE.AdditiveBlending, depthWrite: false,
+        });
+        const traj = new THREE.Line(trajGeo, trajMat);
+        traj.geometry.setDrawRange(0, 2);
+        jGroup.add(traj);
 
-        /* --- 자소 → 기울인 궤도면 + 행성 (180°를 자소 수로 나눠 랜덤 배치) --- */
-        const tilts = syllableTilts(sd.orbits.length);
-        const jamos = [];
-        sd.orbits.forEach((o, j) => {
-          const jGroup = new THREE.Group();
-          jGroup.quaternion.copy(tilts[j]);
-          group.add(jGroup);
+        /* 궤적 글로우 — 정점색 가산합성 4겹 */
+        const glowMat = new THREE.LineBasicMaterial({
+          vertexColors: true, transparent: true, opacity: 0.15,
+          blending: THREE.AdditiveBlending, depthWrite: false,
+        });
+        const glows = [];
+        for (let gi = 0; gi < 4; gi++) {
+          const g = new THREE.Line(trajGeo, glowMat);
+          jGroup.add(g);
+          glows.push(g);
+        }
 
-          /* 궤적 (v13 곡선 → 기울인 평면) */
-          const trajArr = new Float32Array((NPT + 1) * 3);
+        /* 병서(쌍둥이) — 같은 궤도를 5° 틀어 한 벌 더 깔아 겹궤도를 만든다 */
+        let twinLines = null, twinQ = null;
+        if (o.tense) {
+          twinQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 5 * Math.PI / 180);
+          const twinArr = new Float32Array((NPT + 1) * 3);
           o.pts.forEach(([x, y], k) => {
-            trajArr[k * 3] = x * SCALE; trajArr[k * 3 + 1] = 0; trajArr[k * 3 + 2] = y * SCALE;
+            const v = new THREE.Vector3(x * SCALE, 0, y * SCALE).applyQuaternion(twinQ);
+            twinArr[k * 3] = v.x; twinArr[k * 3 + 1] = v.y; twinArr[k * 3 + 2] = v.z;
           });
-          const trajGeo = new THREE.BufferGeometry();
-          trajGeo.setAttribute('position', new THREE.BufferAttribute(trajArr, 3));
-          trajGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((NPT + 1) * 3), 3));
-          const trajMat = new THREE.LineBasicMaterial({
-            vertexColors: true, transparent: true, opacity: 0.9,
-            blending: THREE.AdditiveBlending, depthWrite: false,
-          });
-          const traj = new THREE.Line(trajGeo, trajMat);
-          traj.geometry.setDrawRange(0, 2);
-          jGroup.add(traj);
-
-          /* 궤적 글로우 — 정점색 가산합성 4겹 */
-          const glowMat = new THREE.LineBasicMaterial({
-            vertexColors: true, transparent: true, opacity: 0.15,
-            blending: THREE.AdditiveBlending, depthWrite: false,
-          });
-          const glows = [];
+          const tGeo = new THREE.BufferGeometry();
+          tGeo.setAttribute('position', new THREE.BufferAttribute(twinArr, 3));
+          tGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((NPT + 1) * 3), 3));
+          const tLine = new THREE.Line(tGeo, trajMat);
+          tLine.geometry.setDrawRange(0, 2);
+          jGroup.add(tLine);
+          const tGlows = [];
           for (let gi = 0; gi < 4; gi++) {
-            const g = new THREE.Line(trajGeo, glowMat);
+            const g = new THREE.Line(tGeo, glowMat);
             jGroup.add(g);
-            glows.push(g);
+            tGlows.push(g);
           }
+          twinLines = [tLine, ...tGlows];
+        }
 
-          /* 반짝이는 부스러기 */
-          const ND = 90;
-          const dGeo = new THREE.BufferGeometry();
-          dGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
-          dGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
-          const debris = new THREE.Points(dGeo, new THREE.PointsMaterial({
-            size: 0.9, map: STAR_SPRITE, vertexColors: true, transparent: true,
-            blending: THREE.AdditiveBlending, depthWrite: false,
-          }));
-          debris.frustumCulled = false;
-          jGroup.add(debris);
-          const dust = {
-            age: new Float32Array(ND).fill(99), life: new Float32Array(ND).fill(1),
-            vel: new Float32Array(ND * 3), ph: new Float32Array(ND), idx: 0, acc: 0,
-          };
-          const elC = C3(o.col);
-          const trailC = C3(o.trail);
+        /* 반짝이는 부스러기 */
+        const ND = 90;
+        const dGeo = new THREE.BufferGeometry();
+        dGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
+        dGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
+        const debris = new THREE.Points(dGeo, new THREE.PointsMaterial({
+          size: 0.9, map: STAR_SPRITE, vertexColors: true, transparent: true,
+          blending: THREE.AdditiveBlending, depthWrite: false,
+        }));
+        debris.frustumCulled = false;
+        jGroup.add(debris);
+        const dust = {
+          age: new Float32Array(ND).fill(99), life: new Float32Array(ND).fill(1),
+          vel: new Float32Array(ND * 3), ph: new Float32Array(ND), idx: 0, acc: 0,
+        };
+        const elC = C3(o.col);
+        const trailC = C3(o.trail);
 
-          const NB = 14;
-          const bGeo = new THREE.BufferGeometry();
-          bGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NB * 3), 3));
-          bGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NB * 3), 3));
-          const debrisBig = new THREE.Points(bGeo, new THREE.PointsMaterial({
-            size: 4, map: STAR_SPRITE, vertexColors: true, transparent: true,
-            blending: THREE.AdditiveBlending, depthWrite: false,
-          }));
-          debrisBig.frustumCulled = false;
-          jGroup.add(debrisBig);
-          const dustBig = {
-            age: new Float32Array(NB).fill(99), life: new Float32Array(NB).fill(1),
-            vel: new Float32Array(NB * 3), ph: new Float32Array(NB), idx: 0, acc: 0,
-          };
+        const NB = 14;
+        const bGeo = new THREE.BufferGeometry();
+        bGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NB * 3), 3));
+        bGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NB * 3), 3));
+        const debrisBig = new THREE.Points(bGeo, new THREE.PointsMaterial({
+          size: 4, map: STAR_SPRITE, vertexColors: true, transparent: true,
+          blending: THREE.AdditiveBlending, depthWrite: false,
+        }));
+        debrisBig.frustumCulled = false;
+        jGroup.add(debrisBig);
+        const dustBig = {
+          age: new Float32Array(NB).fill(99), life: new Float32Array(NB).fill(1),
+          vel: new Float32Array(NB * 3), ph: new Float32Array(NB), idx: 0, acc: 0,
+        };
 
-          /* 행성 — 자음: 오행 텍스처(띠·위성 없음) · 모음: 임시 토성 텍스처(띠 + 위성) */
-          const radius = o.sz;
-          const planet = new THREE.Mesh(new THREE.SphereGeometry(radius, 48, 48), planetMaterial(o));
-          planet.add(makeGlyphShell(o, radius));
-          planet.userData.sysIndex = sysIndex;
-          planet.userData.jamoIndex = j;
-          let moonGrp = null;
-          if (o.type === 'vowel') {
-            makeSaturnRing(planet, radius, o);
-            if (o.moons) {
-              moonGrp = new THREE.Group();
-              for (let m = 0; m < o.moons; m++) {
-                const mm = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.26, 16, 16), planetMaterial(o));
-                const ma = m / o.moons * Math.PI * 2;
-                mm.position.set(Math.cos(ma) * radius * 3.1, 0, Math.sin(ma) * radius * 3.1);
-                moonGrp.add(mm);
-              }
-              planet.add(moonGrp);
+        /* 행성 — 본체 없는 고리 천체. 자음: 正圓 오방색 링 띠 · 모음: 천지인 띠 + 위성.
+           본체 자리엔 자소 빌보드가 떠서 글자가 그대로 읽힌다 */
+        const radius = o.sz;
+        const planet = new THREE.Group();
+        planet.add(makeGlyphBillboard(o, radius));
+        planet.userData.sysIndex = sysIndex;
+        planet.userData.jamoIndex = j;
+        let moonGrp = null;
+        if (o.type === 'vowel') {
+          makeSaturnRing(planet, radius, o);
+          if (o.moons) {
+            moonGrp = new THREE.Group();
+            for (let m = 0; m < o.moons; m++) {
+              const mm = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.26, 16, 16), planetMaterial(o));
+              const ma = m / o.moons * Math.PI * 2;
+              mm.position.set(Math.cos(ma) * radius * 3.1, 0, Math.sin(ma) * radius * 3.1);
+              moonGrp.add(mm);
             }
-          } else if (o.tense) {
-            /* 병서 — 쌍둥이 행성 */
-            const twin = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.72, 32, 32), planetMaterial(o));
-            twin.position.set(radius * 1.5, 0, 0);
-            planet.add(twin);
+            planet.add(moonGrp);
           }
-          jGroup.add(planet);
+        } else {
+          makeConsRing(planet, radius, o);
+        }
+        jGroup.add(planet);
 
-          const planetLabel = makeLabelEl(
-            `<span class="ring-icon"></span><span class="name">${o.glyph}</span>`,
-            o.col, () => selectPlanet(sysIndex, j));
-          planet.add(planetLabel);
+        /* 띠·위성이 닿는 가장 바깥 — 반짝이는 이 밖에서만 인다 */
+        const auraR = radius * (o.type === 'vowel'
+          ? Math.max(2.4 + (Math.max(o.beltH | 0, o.beltV | 0) - 1) * 0.5, o.moons ? 3.4 : 0, 2.4)
+          : 2.3);
 
-          jamos.push({
-            ...o, jGroup, planet, planetLabel, moonGrp, traj, trajMat, glows,
-            debris, dust, debrisBig, dustBig, elC, trailC,
-            /* age0 = 작도 시작 시각(음절·자소 순서대로 시차). 되감기 기준점 */
-            age: -(si * 0.6 + j * 0.4), age0: -(si * 0.6 + j * 0.4), tc: 0,
-          });
-        });
+        const planetLabel = makeLabelEl(
+          `<span class="ring-icon"></span><span class="name">${o.glyph}</span>`,
+          o.col, () => selectPlanet(sysIndex, j));
+        planet.add(planetLabel);
 
-        universe.add(group);
-        wordEntry.systems.push(sysIndex);
-        cluster.systems.push(sysIndex);
-        systems.push({
-          index: sysIndex, wordIndex: wIndex, clusterIndex: ci,
-          char: sd.char, word: wd.word, el: sd.el,
-          onset: sd.onset, vowel: sd.vowel, coda: sd.coda,
-          pos, group, star, sunLabel, sunOffLabel, compass, marker, jamos, SCALE, sysF: 1,
+        jamos.push({
+          ...o, jGroup, planet, planetLabel, moonGrp, traj, trajMat, glows, auraR,
+          twinLines, twinQ,
+          debris, dust, debrisBig, dustBig, elC, trailC,
+          /* age0 = 작도 시작 시각(음절·자소 순서대로 시차). 되감기 기준점 */
+          age: -(si * 0.6 + j * 0.4), age0: -(si * 0.6 + j * 0.4), tc: 0,
         });
       });
-      words.push(wordEntry);
+
+      universe.add(group);
+      wordEntry.systems.push(sysIndex);
+      systems.push({
+        index: sysIndex, wordIndex: wi, clusterIndex: wi,
+        char: sd.char, word: wd.word, el: sd.el,
+        onset: sd.onset, vowel: sd.vowel, coda: sd.coda,
+        pos, group, star, sunLabel, sunOffLabel, compass, marker, jamos, SCALE, sysF: 1,
+      });
     });
 
-    clusters.push(cluster);
+    words.push(wordEntry);
+    clusters.push(wordEntry);
   });
 
   // Populate dropdown menus
@@ -1204,6 +1090,7 @@ function buildAll(text) {
     });
   }
 
+  syncReadingButton();
   scene.add(universe);
 }
 
@@ -1320,12 +1207,12 @@ function selectPlanet(si, ji) {
   flyTo(() => jm.planet.getWorldPosition(new THREE.Vector3()), dist, 1.5, () => openLetter(jm, s));
 }
 
-document.getElementById('btn-system').addEventListener('click', () => {
+document.getElementById('btn-system')?.addEventListener('click', () => {
   const { sys } = nearestSystem();
   if (sys) flyToSystem(sys.index);
 });
-document.getElementById('btn-cluster').addEventListener('click', goCluster);
-document.getElementById('btn-galaxy').addEventListener('click', goGalaxy);
+document.getElementById('btn-cluster')?.addEventListener('click', goCluster);
+document.getElementById('btn-galaxy')?.addEventListener('click', goGalaxy);
 
 document.getElementById('btn-toggle-stars').addEventListener('click', toggleStarsVisibility);
 
@@ -1352,7 +1239,8 @@ document.getElementById('btn-toggle-name').addEventListener('click', toggleNameV
 function alignCompass() {
   const T = controls.target.clone();
   const dist = camera.position.distanceTo(T);
-  const targetPos = T.clone().add(new THREE.Vector3(0, 0.5, 0.866).normalize().multiplyScalar(dist));
+  // Y축 바로 위에서 아래로 수직으로 내려다보는 탑뷰 (0점 정렬: 북쪽=위, 남쪽=아래, 동쪽=우측, 서쪽=좌측)
+  const targetPos = T.clone().add(new THREE.Vector3(0, dist, 0.001));
 
   camTween = {
     t: 0, dur: 1.2,
@@ -1425,7 +1313,7 @@ function updateCompassHUD() {
   ctx.stroke();
 
   // Text labels
-  ctx.font = '700 12px "Noto Serif KR", serif';
+  ctx.font = '300 12px "Soonbatang", "SunBatang", serif';
   ctx.fillStyle = 'rgba(232, 234, 240, 0.85)';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -1443,7 +1331,8 @@ function updateCompassHUD() {
 }
 addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (!letterOverlayEl.classList.contains('hidden')) closeLetter();
+    if (!readingOverlayEl.classList.contains('hidden')) closeReading();
+    else if (!letterOverlayEl.classList.contains('hidden')) closeLetter();
     else { const { sys } = nearestSystem(); if (sys) flyToSystem(sys.index); }
   }
 });
@@ -1511,12 +1400,10 @@ let lastScaleName = '';
 function updateScaleHUD() {
   const { sys, d } = nearestSystem();
   const { word, d: dw } = nearestWord();
-  const { cluster, d: dc } = nearestCluster();
   let name;
-  if (sys && d < 260) name = `${sys.char}界`;
-  else if (word && dw < 2600) name = `${word.word} 星團`;
-  else if (cluster && dc < 18000) name = `${cluster.firstWord} 星域`;
-  else name = '우리 銀河';
+  if (sys && d < 260) name = `${sys.char}계`;
+  else if (word && dw < 18000) name = `${word.word} 성단`;
+  else name = '우리 은하';
   if (name !== lastScaleName) {
     lastScaleName = name;
     scaleNameEl.textContent = name;
@@ -1599,45 +1486,118 @@ function letterInit() {
 
 }
 
-/* ── 한지 풀이 표 — 한자 표제 + 한글 새김 ─────────────────── */
-function consRows(jm) {
-  const g = jm.glyph, E = EL[jm.el], jj = jejaText(g);
-  const C = CURVE[TWIN[g] || g];
-  return [
-    ['五音', `${jj.sound}<span class="sub">${jj.soundKo}</span>`],
-    ['制字', `${jj.rule}<span class="sub">${jj.ruleKo}</span>`],
-    ['五行', `${E.h} ${E.name}<span class="sub">${E.ko}</span>`],
-    ['方位', `${E.dir}<span class="sub">${E.dirKo}쪽</span>`],
-    ['季節', `${E.season}<span class="sub">${E.seasonKo}</span>`],
-    ['五方色', `${E.ohbang}<span class="sub">${E.ohbangKo}</span>`],
-    ['四神', `${E.god}<span class="sub">${E.godKo}</span>`],
-    ['德性', `${E.virtue}<span class="sub">${E.virtueKo}</span>`],
-    ['軌道', `${FAMKO[C ? C.f : 'epi']}<span class="sub">${eqText(g)}</span>`],
-  ];
+/* ── 한지 풀이 — 가로 판형 카드 데이터 ───────────────────────
+   왼쪽 열은 큰 항목, 오른쪽 열은 짧은 항목, 性格은 여러 줄 풀이 */
+const RULE_KO = { '象形 基本字': '기본자', '加畫字': '가획자', '各自竝書': '병서자', '異體字': '이체자' };
+const VIRTUE_KO = ['어질 인', '예절 례', '믿을 신', '의로울 의', '슬기 지'];
+const FAMILY = [['ㄱ', 'ㅋ', 'ㄲ'], ['ㄴ', 'ㄷ', 'ㅌ', 'ㄹ', 'ㄸ'], ['ㅁ', 'ㅂ', 'ㅍ', 'ㅃ'], ['ㅅ', 'ㅈ', 'ㅊ', 'ㅆ', 'ㅉ'], ['ㅇ', 'ㅎ']];
+const ENERGY_KO = [
+  ['봄날의 나무처럼 곧게 뻗어 자라는 기운이니', '성장의 에너지를 갖는다'],
+  ['여름 불꽃처럼 위로 타오르는 기운이니', '피어나는 에너지를 갖는다'],
+  ['한가운데서 두루 품어 안는 기운이니', '아우르는 에너지를 갖는다'],
+  ['가을 쇠붙이처럼 거두어 굳히는 기운이니', '여무는 에너지를 갖는다'],
+  ['겨울 물처럼 낮은 곳으로 스며드는 기운이니', '고요히 모이는 에너지를 갖는다'],
+];
+
+function consData(jm) {
+  const E = EL[jm.el], jj = jejaText(jm.glyph);
+  return {
+    family: FAMILY[jm.el],
+    left: [
+      ['五音', `${jj.soundKo} ${RULE_KO[jj.rule] || jj.rule}`],
+      ['季節', E.seasonKo],
+      ['方位', `${E.dirKo}쪽`],
+      ['方位神', E.godKo],
+    ],
+    right: [
+      ['五行', `${E.name} ${E.ko}`],
+      ['五方色', OHBANG_KO[jm.el]],
+      ['德性', VIRTUE_KO[jm.el]],
+    ],
+    persona: [`${E.shapeKo}에서 형태를 얻었다`, ...ENERGY_KO[jm.el]],
+    quote: E.shape,
+  };
 }
+
 /* 陽 ㅏㅑㅗㅛ… · 陰 ㅓㅕㅜㅠ… · 그 밖의 ㅡㅣ는 어느 쪽도 아닌 中 */
 function yinyang(v) {
-  return YANG.has(v) ? ['陽', '밝고 나아가는 소리']
-    : YIN.has(v) ? ['陰', '깊고 물러나는 소리']
+  return YANG.has(v) ? ['陽', '밝고 발산하는 소리']
+    : YIN.has(v) ? ['陰', '깊고 수렴하는 소리']
       : ['中', '음도 양도 아닌 소리'];
 }
-function vowelRows(jm) {
-  const v = jm.glyph;
-  const rule = VBASE.has(v) ? ['基本字', '하늘·땅·사람의 본디 꼴']
-    : VFIRST.has(v) ? ['初出字', '기본자가 한 번 어우러진 꼴']
-      : VSECOND.has(v) ? ['再出字', '기본자가 두 번 어우러진 꼴']
-        : ['合用字', '두 소리를 아울러 쓴 꼴'];
-  const seqH = jm.seq.map(x => SAMH[x]).join(' ');
-  const seqK = jm.seq.map(x => ['ㆍ', 'ㅡ', 'ㅣ'][x]).join(' ');
-  return [
-    ['三才', `${seqH}<span class="sub">${seqK} 차례로 이룸</span>`],
-    ['陰陽', `${yinyang(v)[0]}<span class="sub">${yinyang(v)[1]}</span>`],
-    ['制字', `${rule[0]}<span class="sub">${rule[1]}</span>`],
-    ['天', `衛星 ${jm.moons}<span class="sub">ㆍ의 수만큼 위성</span>`],
-    ['地', `橫帶 ${jm.beltH}<span class="sub">ㅡ의 수만큼 가로띠</span>`],
-    ['人', `縱帶 ${jm.beltV}<span class="sub">ㅣ의 수만큼 세로띠</span>`],
-    ['軌道', `圓<span class="sub">${jm.yang ? '시계' : '반시계'} 방향</span>`],
-  ];
+
+function vowelData(jm) {
+  const tail = YANG.has(jm.glyph) ? '확산하는 양의 에너지를 갖는다'
+    : YIN.has(jm.glyph) ? '수렴하는 음의 에너지를 갖는다'
+      : '어느 쪽에도 치우치지 않는 中의 에너지를 갖는다';
+  return {
+    family: jm.seq.map(x => ['ㆍ', 'ㅡ', 'ㅣ'][x]),
+    left: [
+      ['三才', jm.seq.map(x => SAMH[x]).join(', ')],
+      ['陰陽', yinyang(jm.glyph)[1]],
+    ],
+    right: [
+      ['天', `위성 ${jm.moons}`],
+      ['地', `가로띠 ${jm.beltH}`],
+      ['人', `세로띠 ${jm.beltV}`],
+    ],
+    persona: [
+      '중성은 음양과 삼재를 따른다',
+      '둥근 ㆍ는 하늘, 평평한 ㅡ는 땅, 곧게 선 ㅣ는 사람으로',
+      '셋이 어우러진 형상을 이루며',
+      tail,
+    ],
+    quote: '取象於天地人',
+  };
+}
+
+/* 궤도 도형 — 종이 위에 먹선으로 다시 그린 자소 궤도.
+   자음은 제 수식 곡선(병서는 살짝 돌려 한 벌 더), 모음은 원 + 띠 + 위성 */
+function drawOrbitThumb(jm) {
+  const cv = document.getElementById('letter-orbit');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(43, 30, 18, 0.8)';
+  ctx.fillStyle = 'rgba(43, 30, 18, 0.8)';
+  ctx.lineWidth = 2;
+  const cx = W / 2, cy = H / 2;
+  const trace = (P) => {
+    ctx.beginPath();
+    P.forEach(([x, y], i) => (i ? ctx.lineTo(cx + x, cy + y) : ctx.moveTo(cx + x, cy + y)));
+    ctx.stroke();
+  };
+  if (jm.type === 'vowel') {
+    const R = H * 0.3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.stroke();
+    const sgn = jm.yang === false ? -1 : 1;
+    for (let k = 0; k < (jm.beltH | 0); k++) {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, R * (1.7 + k * 0.35), R * 0.55, -0.42, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    for (let k = 0; k < (jm.beltV | 0); k++) {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, R * 0.55, R * (1.7 + k * 0.35), sgn * 0.42, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    for (let m = 0; m < (jm.moons | 0); m++) {
+      const a = -0.7 - m * 2.4;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * R * 1.55, cy + Math.sin(a) * R * 1.55, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else {
+    const P = jamoCurve(jm.glyph, Math.min(W, H) * 0.42);
+    trace(P);
+    if (jm.tense) {
+      ctx.globalAlpha = 0.7;
+      trace(rotate2(P, 0.35));
+      ctx.globalAlpha = 1;
+    }
+  }
 }
 
 /* jm = 자소 궤도 정보, sys = 그 자소가 속한 음절 계 */
@@ -1652,48 +1612,30 @@ function openLetter(jm, sys) {
     Lscene.remove(Lcapsule);
     Lcapsule.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   }
+  /* 행성 본체가 사라졌으니 캡슐도 고리만 — 발치에 낮게 깔리는 오방색 가락지 */
   Lcapsule = new THREE.Group();
-  const shell = new THREE.Mesh(
-    new THREE.SphereGeometry(28, 64, 64),
-    new THREE.MeshStandardMaterial({
-      map: loadTex(planetTex(jm)), color: C3(planetSpec(jm).tint),
-      emissive: C3(planetSpec(jm).tint), emissiveIntensity: planetSpec(jm).glow + 0.25,
-      transparent: true, opacity: 0.42,
-      side: THREE.DoubleSide, depthWrite: false, roughness: 1,
-    }));
-  Lcapsule.add(shell);
-  if (jm.type === 'vowel') makeSaturnRing(shell, 28, jm);
+  if (jm.type === 'vowel') makeBelt(Lcapsule, 9, 1.4, 2.4, -Math.PI / 2, 0, '#e8dcc2');
+  else makeBelt(Lcapsule, 9, 1.4, 2.4, -Math.PI / 2, 0, jm.col);
+  Lcapsule.userData.dir = jm.dir;
+  Lcapsule.position.y = -8;
   Lscene.add(Lcapsule);
 
   Lcamera.position.set(0, .4, 14);
   Lcontrols.target.set(0, -.5, 0);
 
   const isV = jm.type === 'vowel';
-  const E = isV ? VOWEL_EL : EL[jm.el];
-  const KIND = { '초성': '初聲', '중성': '中聲', '종성': '終聲' };
+  const D = isV ? vowelData(jm) : consData(jm);
 
-  const elemEl = document.getElementById('letter-element');
-  elemEl.textContent = isV
-    ? `中聲 · ${yinyang(jm.glyph)[0]} · 三才 ${jm.seq.map(x => SAMH[x]).join('')}`
-    : `${KIND[jm.kind] || jm.kind} · ${jejaText(jm.glyph).sound} · ${EL[jm.el].h}`;
-  elemEl.style.color = E.ink;
+  document.getElementById('letter-char').textContent = jm.glyph;
+  document.getElementById('letter-family').innerHTML =
+    D.family.map(g => (g === jm.glyph ? `<b>${g}</b>` : g)).join(' ');
+  drawOrbitThumb(jm);
 
-  const charEl = document.getElementById('letter-char');
-  charEl.textContent = jm.glyph;
-  charEl.style.color = E.ink;
-
-  document.getElementById('letter-jamo').innerHTML =
-    `${sys ? `<b>${sys.char}</b> 音節 · ` : ''}${KIND[jm.kind] || jm.kind} <span class="sub">${jm.kind}</span>`;
-
+  const rowsHtml = (rows) => rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   document.getElementById('letter-table').innerHTML =
-    (isV ? vowelRows(jm) : consRows(jm)).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-
-  document.getElementById('letter-desc').innerHTML = isV
-    ? '가운뎃소리는 오행이 아니라 <b>음양(陰陽)</b>과 <b>삼재(三才·天地人)</b>를 따른다. '
-    + '둥근 ㆍ는 하늘이요, 평평한 ㅡ는 땅이요, 곧게 선 ㅣ는 사람이니, 이 셋이 어우러져 소리를 이룬다. '
-    + '그리하여 이 행성은 둥근 궤도를 돌며, 天의 수만큼 위성을 거느리고 地·人의 수만큼 띠를 두른다.'
-    : `<b>${E.shape}</b> — ${E.shapeKo}에서 그 꼴을 얻었다. ${E.trait} `
-    + '이 기운이 행성의 물질과 궤도의 수식을 함께 정한다.';
+    rowsHtml(D.left) + `<dt>性格</dt><dd>${D.persona.join('<br>')}</dd>`;
+  document.getElementById('letter-table2').innerHTML = rowsHtml(D.right);
+  document.getElementById('letter-quote').textContent = D.quote;
 
   letterOverlayEl.classList.remove('hidden');
   document.body.classList.add('reading');
@@ -1707,6 +1649,54 @@ function closeLetter() {
   if (sys) flyTo(() => sys.pos.clone(), 90, 1.8);
 }
 document.getElementById('letter-close').addEventListener('click', closeLetter);
+
+/* ═════════════════════════════════════════════════════════════
+   이름풀이 — 첫 어절의 음양·오행을 세어 우주 위에 세로로 편다
+═════════════════════════════════════════════════════════════ */
+const readingOverlayEl = document.getElementById('reading-overlay');
+const btnReading = document.getElementById('btn-reading');
+
+/* 이름 = 가장 가까운 성단(이름) */
+const readingName = () => {
+  const { word } = nearestWord();
+  return word ? word.word : (words.length ? words[0].word : '');
+};
+
+function syncReadingButton() {
+  const n = readingName();
+  btnReading.querySelector('.br-name').textContent = n;
+  btnReading.classList.toggle('on', !!n);
+}
+
+function openReading() {
+  const R = nameReading(readingName());
+  if (!R) return;
+
+  /* 집계 — 음양은 있는 것만, 오행도 있는 것만 */
+  const counts = [];
+  if (R.yang) counts.push(`陽 ${R.yang}`);
+  if (R.yin) counts.push(`陰 ${R.yin}`);
+  if (R.mid) counts.push(`中 ${R.mid}`);
+  R.el.forEach((n, i) => { if (n) counts.push(`${EL[i].h} ${n}`); });
+  document.getElementById('reading-counts').textContent = counts.join('  ');
+
+  document.getElementById('reading-name').textContent = R.name;
+  document.getElementById('reading-traits').innerHTML =
+    R.traits.map(t => `<span>${t}</span>`).join('');
+  document.getElementById('reading-advice').innerHTML =
+    [R.lackLine, ...R.advice].join('<br>');
+
+  readingOverlayEl.classList.remove('hidden');
+  document.body.classList.add('divining');
+}
+
+function closeReading() {
+  readingOverlayEl.classList.add('hidden');
+  document.body.classList.remove('divining');
+}
+
+btnReading.addEventListener('click', openReading);
+document.getElementById('reading-close').addEventListener('click', closeReading);
 
 /* ═════════════════════════════════════════════════════════════
    입력 → 성단·계 재구성
@@ -1805,8 +1795,13 @@ function animate() {
         const idx = Math.min(NPT, Math.floor(u * NPT));
         const [px, py] = y.pts[idx];
         y.planet.position.set(px * SC, 0, py * SC);
-        y.planet.rotation.y += dt * 0.25;
-        if (y.moonGrp) y.moonGrp.rotation.y += dt * 0.9;
+        /* 병서 — 두 바퀴가 한 벌이다. 홀수 바퀴는 5° 틀어진 겹궤도 쪽으로 갈아탄다
+           (궤도면을 통째로 돌린 것과 같은 회전을 좌표에 걸어 자리만 옮긴다) */
+        if (y.twinQ && Math.floor(y.tc) % 2 === 1) y.planet.position.applyQuaternion(y.twinQ);
+        /* 자전 — 제 공전과 같은 손으로 돈다. 위에서 볼 때 rotation.y 증가는
+           반시계이므로, 시계(dir=+1)로 돌리려면 빼 준다 */
+        y.planet.rotation.y -= dt * speed * 0.25 * y.dir;
+        if (y.moonGrp) y.moonGrp.rotation.y -= dt * speed * 0.9 * y.dir;
 
         /* ----- 궤적 글로우 꼬리 (행성 뒤로 한 바퀴에 걸쳐 소멸) ----- */
         const ca = y.traj.geometry.attributes.color.array;
@@ -1830,12 +1825,15 @@ function animate() {
         while (du.acc >= 1) {
           du.acc -= 1;
           const i = du.idx = (du.idx + 1) % 90;
-          dp[i * 3] = y.planet.position.x + (Math.random() - 0.5) * 0.7;
-          dp[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
-          dp[i * 3 + 2] = y.planet.position.z + (Math.random() - 0.5) * 0.7;
-          du.vel[i * 3] = (Math.random() - 0.5) * 0.9;
+          /* 띠 바깥 고리 안에서 인다 — 가운데 자소가 가려지지 않게 */
+          const sa = Math.random() * TWO_PI;
+          const sr = y.auraR * (1.05 + Math.random() * 0.35);
+          dp[i * 3] = y.planet.position.x + Math.cos(sa) * sr;
+          dp[i * 3 + 1] = (Math.random() - 0.5) * y.auraR * 0.45;
+          dp[i * 3 + 2] = y.planet.position.z + Math.sin(sa) * sr;
+          du.vel[i * 3] = Math.cos(sa) * 0.3 + (Math.random() - 0.5) * 0.9;
           du.vel[i * 3 + 1] = (Math.random() - 0.5) * 0.7;
-          du.vel[i * 3 + 2] = (Math.random() - 0.5) * 0.9;
+          du.vel[i * 3 + 2] = Math.sin(sa) * 0.3 + (Math.random() - 0.5) * 0.9;
           du.age[i] = 0;
           du.life[i] = 1.1 + Math.random() * 1.5;
           du.ph[i] = Math.random() * TWO_PI;
@@ -1863,12 +1861,14 @@ function animate() {
         while (db.acc >= 1) {
           db.acc -= 1;
           const i = db.idx = (db.idx + 1) % 14;
-          bp[i * 3] = y.planet.position.x + (Math.random() - 0.5) * 1.2;
-          bp[i * 3 + 1] = (Math.random() - 0.5) * 0.8;
-          bp[i * 3 + 2] = y.planet.position.z + (Math.random() - 0.5) * 1.2;
-          db.vel[i * 3] = (Math.random() - 0.5) * 0.6;
+          const ba = Math.random() * TWO_PI;
+          const br = y.auraR * (1.1 + Math.random() * 0.45);
+          bp[i * 3] = y.planet.position.x + Math.cos(ba) * br;
+          bp[i * 3 + 1] = (Math.random() - 0.5) * y.auraR * 0.6;
+          bp[i * 3 + 2] = y.planet.position.z + Math.sin(ba) * br;
+          db.vel[i * 3] = Math.cos(ba) * 0.25 + (Math.random() - 0.5) * 0.6;
           db.vel[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
-          db.vel[i * 3 + 2] = (Math.random() - 0.5) * 0.6;
+          db.vel[i * 3 + 2] = Math.sin(ba) * 0.25 + (Math.random() - 0.5) * 0.6;
           db.age[i] = 0;
           db.life[i] = 1.6 + Math.random() * 1.4;
           db.ph[i] = Math.random() * TWO_PI;
@@ -1895,6 +1895,7 @@ function animate() {
       y.planet.visible = visible;
       y.traj.visible = orbitVisible;
       for (const g of y.glows) g.visible = orbitVisible;
+      if (y.twinLines) for (const l of y.twinLines) l.visible = orbitVisible;
       y.debris.visible = visible;
       y.debrisBig.visible = visible;
       const op = showName ? sysF : 0;
@@ -1944,7 +1945,7 @@ function animate() {
 
   /* ----- 레터 오버레이 ----- */
   if (Lscene && !letterOverlayEl.classList.contains('hidden')) {
-    if (Lcapsule) Lcapsule.rotation.y = elapsedTime * 0.04;
+    if (Lcapsule) Lcapsule.rotation.y = -elapsedTime * 0.04 * (Lcapsule.userData.dir || 1);
     Lcontrols.update();
     Lcomposer.render();
   }
@@ -1964,6 +1965,6 @@ addEventListener('resize', () => {
 });
 
 /* ---------------- 시작 ---------------- */
-curText = '김수환무. 거북이와 두루미';
+curText = '김수환무';
 buildAll(curText);
-animate();
+animate()

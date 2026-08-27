@@ -28,6 +28,42 @@
   --hanji-line: rgba(90, 70, 44, 0.28);
 }
 
+@font-face {
+  font-family: "Soonbatang";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/SunBatang-Light.woff") format("woff"),
+       url("../src/font/SunBatang-Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Soonbatang";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/SunBatang-Light.woff") format("woff"),
+       url("../src/font/SunBatang-Light.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Soonbatang";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/SunBatang-Medium.woff") format("woff"),
+       url("../src/font/SunBatang-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Soonbatang";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/SunBatang-Bold.woff") format("woff"),
+       url("../src/font/SunBatang-Medium.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -41,7 +77,8 @@ body {
   overflow: hidden;
   background: #000;
   color: var(--txt);
-  font-family: "Noto Serif KR", "Nanum Myeongjo", "Apple SD Gothic Neo", serif;
+  font-family: "Soonbatang", "SunBatang", serif;
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -99,11 +136,12 @@ body {
   pointer-events: auto;
 }
 
-#topbar h1 {
+#topbar h1,
+#topbar h3 {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  font-weight: 500;
+  font-weight: 300;
 }
 
 #topbar h1 .hanja {
@@ -116,13 +154,6 @@ body {
   font-size: 11px;
   letter-spacing: 0.34em;
   color: var(--txt-dim);
-}
-
-#topbar .menu {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  pointer-events: auto;
 }
 
 /* 한자를 크게, 한글을 작게 병기하는 공통 버튼 */
@@ -143,7 +174,7 @@ body {
 }
 
 .navlink b {
-  font-weight: 700;
+  font-weight: 500;
   font-size: 14px;
   letter-spacing: 0.12em;
 }
@@ -168,63 +199,68 @@ body {
   min-width: 46px;
 }
 
-/* ---------- 이름 입력 (상단 중앙) ---------- */
+/* ---------- 이름 입력 · SVG 두루마리 (상단 중앙) ---------- */
 #input-wrap {
   position: fixed;
-  top: 14px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
-  display: flex;
-  align-items: stretch;
-  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.7));
+  width: 500px;
+  height: 60px;
 }
 
-/* 두루마리 축(軸) — 양 끝에 말려 있는 나무 대 */
-#input-wrap .rod {
-  width: 14px;
-  border-radius: 7px;
-  background: linear-gradient(90deg,
-      #2b1e13 0%, #6d4e30 34%, #c3a173 50%, #6b4a2c 68%, #241a11 100%);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, .4);
-}
-
-/* 펼쳐진 종이 — 축 쪽으로 갈수록 그늘이 져 말린 결이 보인다 */
-#input-wrap .paper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 11px 26px;
-}
-
-#input-wrap .paper::before {
-  content: "";
+#input-wrap .scroll-svg {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  background: linear-gradient(90deg,
-      rgba(58, 40, 22, .34) 0%, transparent 7%,
-      transparent 93%, rgba(58, 40, 22, .34) 100%);
+  filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.6));
+}
+
+.scroll-paper,
+.scroll-rod,
+.scroll-cap {
+  fill: rgba(16, 13, 10, 0.5);
+  stroke: rgba(226, 208, 168, 0.35);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  transition: stroke 0.2s;
+}
+
+#input-wrap:hover .scroll-paper,
+#input-wrap:hover .scroll-rod,
+#input-wrap:hover .scroll-cap,
+#input-wrap:focus-within .scroll-paper,
+#input-wrap:focus-within .scroll-rod,
+#input-wrap:focus-within .scroll-cap {
+  stroke: rgba(226, 208, 168, 0.65);
 }
 
 #nameInput {
-  position: relative;
-  z-index: 2;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: none;
   border: none;
   outline: none;
-  color: var(--hanji-ink);
+  color: var(--txt);
   text-align: center;
   font-family: inherit;
-  font-weight: 500;
-  font-size: 17px;
+  font-weight: 300;
+  font-size: 16px;
   letter-spacing: 0.16em;
-  width: 340px;
+  text-indent: 0.16em;
+  width: 420px;
+  padding: 0;
+  margin: 0;
 }
 
 #nameInput::placeholder {
-  color: rgba(58, 44, 26, 0.45);
+  color: var(--txt-dim);
+  opacity: 0.55;
   font-size: 13px;
   letter-spacing: 0.1em;
 }
@@ -247,7 +283,7 @@ body {
 
 #scale-hud .scale-name {
   font-size: 27px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.1em;
   text-shadow: 0 0 12px rgba(0, 0, 0, 0.95);
 }
@@ -282,7 +318,7 @@ body {
 
 .planet-label .name {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.24em;
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.95);
 }
@@ -304,7 +340,7 @@ body {
 
 .sun-off-label {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--ob-baek);
   letter-spacing: 0.12em;
   pointer-events: auto;
@@ -460,54 +496,7 @@ body {
   inset: 0;
 }
 
-/* 판본 괘선 — 훈민정음 해례본의 세로 칸(界線) */
-#letter-frame {
-  position: absolute;
-  inset: 34px;
-  z-index: 42;
-  pointer-events: none;
-  border: 1px solid rgba(226, 208, 168, 0.22);
-  box-shadow:
-    inset 0 0 0 5px rgba(226, 208, 168, 0.06),
-    inset 0 0 120px rgba(0, 0, 0, 0.5);
-  background:
-    repeating-linear-gradient(90deg,
-      rgba(226, 208, 168, 0.09) 0 1px,
-      transparent 1px 8.3333%),
-    /* 행성 속을 어둡게 눌러 종이만 떠오르게 한다 */
-    radial-gradient(115% 85% at 50% 56%,
-      rgba(7, 6, 4, 0.38), rgba(7, 6, 4, 0.88));
-}
-
-/* 우측 세로 제목 (縱書) */
-#letter-vtitle {
-  position: absolute;
-  top: 106px;
-  right: 58px;
-  z-index: 45;
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  pointer-events: none;
-  user-select: none;
-}
-
-#letter-vtitle .vt-main {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.26em;
-  color: rgba(240, 232, 214, 0.9);
-  text-shadow: 0 0 16px rgba(0, 0, 0, 0.9);
-}
-
-#letter-vtitle .vt-sub {
-  font-size: 12px;
-  letter-spacing: 0.4em;
-  color: rgba(226, 208, 168, 0.45);
-}
-
+/* 닫기 버튼 — 우주 위에 남는 유일한 UI */
 #letter-close {
   position: absolute;
   top: 52px;
@@ -529,20 +518,21 @@ body {
   background: rgba(226, 208, 168, 0.14);
 }
 
-/* --- 한지 풀이 패널 --- */
+/* --- 한지 풀이 종이 — 가로 판형, 우주 한가운데 --- */
 #letter-panel {
   position: absolute;
-  left: 50%;
-  margin-left: -196px;
-  bottom: 52px;
+  inset: 0;
+  margin: auto;
   z-index: 45;
-  width: 392px;
-  max-height: calc(100vh - 116px);
+  width: min(900px, 92vw);
+  height: fit-content;
+  max-height: 88vh;
   overflow-y: auto;
-  padding: 24px 28px;
+  padding: 30px 46px 26px;
+  isolation: isolate;
 }
 
-/* 파묻혀 있던 해설지를 들어올려 펴 보는 연출 */
+/* 파묻혀 있던 해설지를 들어올려 편 뒤, 우주에 두둥실 띄워 둔다 */
 @keyframes unearth {
   0% {
     opacity: 0;
@@ -561,8 +551,30 @@ body {
   }
 }
 
+@keyframes paper-drift {
+
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+
+  22% {
+    transform: translate3d(5px, -11px, 0) rotate(0.55deg);
+  }
+
+  48% {
+    transform: translate3d(-3px, 3px, 0) rotate(-0.2deg);
+  }
+
+  74% {
+    transform: translate3d(-7px, 9px, 0) rotate(-0.6deg);
+  }
+}
+
 body.reading #letter-panel {
-  animation: unearth 1s cubic-bezier(.18, .82, .24, 1) both;
+  animation:
+    unearth 1s cubic-bezier(.18, .82, .24, 1) both,
+    paper-drift 13s ease-in-out 1s infinite;
 }
 
 #letter-panel::-webkit-scrollbar {
@@ -573,106 +585,119 @@ body.reading #letter-panel {
   background: rgba(90, 70, 44, 0.35);
 }
 
-/* 상단 두 줄 계선 */
+/* 상단 두 줄 계선 · 하단 한 줄 계선 */
 .hanji-rule {
   height: 0;
   border-top: 2px solid var(--hanji-line);
   border-bottom: 1px solid var(--hanji-line);
   padding-top: 3px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
+.hanji-rule-bottom {
+  margin-top: 20px;
+  border-top: 2px solid var(--hanji-line);
+}
+
+/* 머리 — 좌: 궤도 도형 + 자소 무리, 우: 큰 자소 */
 .hp-head {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 4px 6px 14px;
+  border-bottom: 1px solid rgba(58, 42, 26, 0.7);
 }
 
-.hp-eyebrow {
-  width: 100%;
-  font-size: 11px;
+.hp-orbitbox {
+  padding-top: 4px;
+}
+
+#letter-orbit {
+  display: block;
+  width: 140px;
+  height: 100px;
+}
+
+.hp-family {
+  margin-top: 6px;
+  font-size: 15px;
   letter-spacing: 0.3em;
-  color: var(--hanji-dim);
+  color: rgba(90, 70, 44, 0.45);
+}
+
+.hp-family b {
+  color: var(--hanji-ink);
+  font-weight: 500;
 }
 
 #letter-panel h2 {
-  font-size: 44px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--hanji-ink);
+  font-size: 92px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #33231a;
+  padding-right: 14px;
 }
 
-.hp-jamo {
-  flex: 1;
-  font-size: 11px;
-  line-height: 1.7;
-  letter-spacing: 0.06em;
-  color: var(--hanji-dim);
+/* 본문 — 왼쪽 큰 항목 + 오른쪽 짧은 항목 */
+.hp-cols {
+  display: flex;
+  gap: 36px;
+  margin-top: 24px;
 }
 
-/* 한자 · 한글 병기 표 */
-.hanja-table {
+.hp-rows {
+  flex: 1.55;
   display: grid;
-  grid-template-columns: 62px 1fr;
-  border-top: 1px solid var(--hanji-line);
+  grid-template-columns: 94px 1fr;
+  align-content: start;
+  row-gap: 16px;
+  font-size: 15.5px;
 }
 
-.hanji-table dt {
-  padding: 5px 8px 5px 0;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+.hp-rows.right {
+  flex: 1;
+  grid-template-columns: 86px 1fr;
+}
+
+.hp-rows dt {
   color: var(--hanji-dim);
-  border-bottom: 1px solid rgba(90, 70, 44, 0.16);
-  border-right: 1px solid var(--hanji-line);
+  font-weight: 500;
+  letter-spacing: 0.1em;
 }
 
-.hanja-table dd {
-  padding: 5px 0 5px 12px;
-  font-size: 12.5px;
-  line-height: 1.5;
+.hp-rows dd {
   color: var(--hanji-ink);
-  border-bottom: 1px solid rgba(90, 70, 44, 0.16);
+  line-height: 1.75;
+  letter-spacing: 0.02em;
 }
 
-.hanja-table dd .sub {
-  font-size: 11px;
+/* 발치 — 좌: 한문 새김, 우: 낙관(落款) */
+.hp-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 28px;
+}
+
+.hp-quote {
+  font-size: 12.5px;
+  letter-spacing: 0.12em;
   color: var(--hanji-dim);
-  margin-left: 6px;
-  letter-spacing: 0.04em;
 }
 
-.hp-desc {
-  margin-top: 14px;
-  font-size: 12px;
-  line-height: 1.8;
-  color: #3a2e21;
-  letter-spacing: 0.01em;
-}
-
-/* 낙관(落款) */
 .seal {
-  display: block;
-  width: fit-content;
-  margin: 14px 0 0 auto;
   writing-mode: vertical-rl;
   text-orientation: upright;
   background: #a5291f;
   color: #f6ecd8;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  padding: 8px 5px;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.1em;
+  padding: 10px 9px;
   border-radius: 2px;
   box-shadow: 0 2px 8px rgba(90, 20, 12, .4);
-  opacity: 0.92;
-}
-
-/* 한지 결이 본문 위로 올라오지 않게 — ::after는 테두리 전용 */
-#letter-panel {
-  isolation: isolate;
+  opacity: 0.94;
 }
 
 /* ---------- 우하단 방위 표시기 (컴퍼스) ---------- */
@@ -728,43 +753,21 @@ body.reading #letter-panel {
     gap: 6px;
   }
 
-  #letter-frame {
-    inset: 16px;
-  }
-
   #letter-panel {
-    left: 26px;
-    right: 26px;
-    width: auto;
-    bottom: 84px;
-  }
-
-  #letter-vtitle {
-    top: 34px;
-    right: 34px;
+    width: calc(100vw - 28px);
+    padding: 20px 22px;
   }
 
   #letter-close {
-    top: 30px;
-    right: 78px;
+    top: 24px;
+    right: 24px;
   }
 }
 
-/* 한지 패널 안 새김글(한글 풀이)과 강조 */
-#letter-panel .sub {
-  font-size: 11px;
-  color: var(--hanji-dim);
-  margin-left: 6px;
-  letter-spacing: 0.03em;
-}
-
+/* 한지 종이 안 강조 */
 #letter-panel b {
-  font-weight: 700;
+  font-weight: 500;
   color: #17110b;
-}
-
-.hp-jamo b {
-  font-size: 13px;
 }
 
 /* 풀이(訓民正音) 화면에서는 우주 UI를 감춘다 — 판본만 남긴다 */
@@ -772,8 +775,196 @@ body.reading #topbar,
 body.reading #right-controls,
 body.reading #scale-hud,
 body.reading #input-wrap,
-body.reading #timebar {
+body.reading #timebar,
+body.reading #btn-reading,
+body.divining #topbar,
+body.divining #right-controls,
+body.divining #scale-hud,
+body.divining #input-wrap,
+body.divining #timebar,
+body.divining #compass-hud,
+body.divining #btn-reading {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.35s;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   이름풀이 — 좌하단 열기 단추 + 세로쓰기 판
+═══════════════════════════════════════════════════════════ */
+#btn-reading {
+  position: fixed;
+  left: 30px;
+  bottom: 30px;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 20px;
+  background: rgba(16, 13, 10, 0.62);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--ui-border);
+  border-radius: 3px;
+  color: var(--txt);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, opacity 0.35s;
+}
+
+#btn-reading.on {
+  display: flex;
+}
+
+#btn-reading:hover {
+  background: rgba(226, 208, 168, 0.12);
+  border-color: rgba(226, 208, 168, 0.4);
+}
+
+#btn-reading .br-name {
+  font-weight: 500;
+}
+
+#btn-reading .br-label {
+  color: var(--txt-dim);
+}
+
+#btn-reading .br-arrow {
+  margin-left: 8px;
+  color: var(--txt-dim);
+  transition: transform 0.2s;
+}
+
+#btn-reading:hover .br-arrow {
+  transform: translateX(4px);
+}
+
+#reading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 48;
+  /* 별밭은 그대로 두고 살짝 눌러 글씨가 읽히게 한다 */
+  background: rgba(4, 3, 2, 0.58);
+  opacity: 1;
+  transition: opacity 0.5s;
+}
+
+#reading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#reading-close {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  background: rgba(16, 13, 10, 0.6);
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  color: var(--txt-dim);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+#reading-close:hover {
+  color: var(--txt);
+  background: rgba(226, 208, 168, 0.14);
+}
+
+/* 겹줄 테두리 — 판본의 광곽(匡郭) */
+#reading-paper {
+  position: absolute;
+  inset: 5.2vh 4.4vw;
+  border: 2px solid rgba(240, 236, 226, 0.9);
+  padding: 30px 34px;
+  overflow: hidden;
+}
+
+#reading-paper::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border: 1px solid rgba(240, 236, 226, 0.72);
+  pointer-events: none;
+}
+
+/* 세로쓰기 — 오른쪽에서 왼쪽으로. flex-direction:column 이 곧 우→좌 배열 */
+.rp-flow {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(16px, 2.6vmin, 30px);
+  width: 100%;
+  height: 100%;
+  color: #f2efe7;
+  user-select: none;
+}
+
+.rp-counts {
+  font-size: clamp(12px, 1.9vmin, 16px);
+  letter-spacing: 0.36em;
+  color: rgba(242, 239, 231, 0.72);
+  padding-top: 6px;
+}
+
+.rp-name {
+  font-size: clamp(40px, 11vmin, 92px);
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-shadow: 0 0 26px rgba(255, 246, 220, 0.28);
+}
+
+/* 성정 — 한 구절이 한 행. 행마다 계선을 세운다 */
+.rp-traits {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.rp-traits span {
+  padding: 4px clamp(10px, 1.8vmin, 22px) 0 0;
+  margin-right: clamp(10px, 1.8vmin, 22px);
+  border-right: 1px solid rgba(240, 236, 226, 0.55);
+  font-size: clamp(17px, 3.6vmin, 32px);
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+}
+
+/* 처방 — 계선 없이 흐른다 */
+.rp-advice {
+  font-size: clamp(14px, 2.9vmin, 25px);
+  line-height: 1.95;
+  letter-spacing: 0.08em;
+  color: rgba(242, 239, 231, 0.9);
+  padding-top: 4px;
+}
+
+/* 판이 우주에 두둥실 뜨도록 */
+body.divining #reading-paper {
+  animation:
+    unearth 0.9s cubic-bezier(.18, .82, .24, 1) both,
+    paper-drift 15s ease-in-out 0.9s infinite;
+}
+
+@media (max-width: 720px) {
+  #btn-reading {
+    left: 16px;
+    bottom: 84px;
+    font-size: 14px;
+    padding: 12px 15px;
+  }
+
+  #reading-paper {
+    inset: 3vh 3vw;
+    padding: 18px 20px;
+  }
 }
