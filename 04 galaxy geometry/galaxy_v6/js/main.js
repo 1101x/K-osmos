@@ -550,10 +550,10 @@ function makeGlowSprite(size) {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   [뎁스 3] 음절 → 계 · [뎁스 2] 어절 → 성단 · [뎁스 1] 문장 → 은하
-   음절 하나 = 계 하나 (중심 = 음절 레터 그래픽, 행성 = 자소)
-   어절 하나 = 성단 하나 (음절 간 거리의 3배로 배치)
-   ". " 기준 문장 하나 = 은하 내 랜덤 좌표의 성단 묶음
+   [뎁스 3] 음절 → 계 · [뎁스 2] 이름 → 성단 · [뎁스 1] 심은 이름들 → 은하
+   음절 하나 = 계 하나 (중심 = 노란 발광, 행성 = 자소)
+   이름 하나 = 성단 하나 — 띄어쓰기는 성단을 가르지 않고 한 성단에 함께 묶인다
+   엔터로 심은 이름마다 은하 원반 위 다른 좌표의 성단이 하나씩 늘어난다
    행성 궤도 = geometry_v13 자소 궤적 · 자소마다 궤도면을 기울여 구분
 ═════════════════════════════════════════════════════════════ */
 /* 행성 재질 사양 = 오행 표(EL) 그 자체. 자음은 오행, 모음은 달 */
@@ -624,33 +624,31 @@ function planetMaterial(o) {
   return planetMatCache[s.tex];
 }
 
-/* 띄어쓰기(공백) → 어절(성단) / 음절 → v13 자소 궤도(계) */
-function parseText(text) {
-  const rawWords = text.trim().split(/\s+/).filter(Boolean);
-  const out = [];
-  for (const w of rawWords) {
-    const sylls = [...w].map(systemFor).filter(Boolean);
-    if (sylls.length) out.push({ word: sylls.map(s => s.char).join(''), sylls });
-  }
-  return out;
+/* 이름 하나 = 성단 하나. 띄어쓰기는 성단을 가르지 않고 한 성단 안에 함께 묶인다
+   (음절 하나 = v13 자소 궤도를 가진 계 하나) */
+function parseName(text) {
+  return [...text].map(systemFor).filter(Boolean);
 }
 
-/* 어절 성단 배치 — 우리은하 원반 내 랜덤 좌표 (첫 성단 = 태양 자리 = 원점) */
-function placeClusters(n) {
-  const locals = [SUN_LOCAL.clone()];
-  for (let i = 1; i < n; i++) {
+/* 이름 성단 자리 — 첫 이름은 태양 자리(원점), 나머지는 우리은하 원반 위 랜덤.
+   한번 정한 자리는 이름에 눌러 두어, 다시 지어도 우주에서 움직이지 않는다.
+   은하 변환이 회전+평행이동뿐이라 세계좌표 거리가 곧 은하 국소좌표 거리다 */
+function assignClusterPos(names) {
+  const used = names.map(n => n.pos).filter(Boolean);
+  names.forEach((n, i) => {
+    if (n.pos) return;
+    if (i === 0) { n.pos = new THREE.Vector3(0, 0, 0); used.push(n.pos); return; }
     let p, tries = 0;
     do {
       const r = 3500 + Math.random() * 11000;
       const th = Math.random() * Math.PI * 2;
-      p = new THREE.Vector3(Math.cos(th) * r, gauss() * 420, Math.sin(th) * r);
+      p = new THREE.Vector3(Math.cos(th) * r, gauss() * 420, Math.sin(th) * r)
+        .applyEuler(GALAXY_TILT).add(galaxy.position);
       tries++;
-    } while (locals.some(q => q.distanceTo(p) < 7500) && tries < 200);
-    locals.push(p);
-  }
-  return locals.map((l, i) => i === 0
-    ? new THREE.Vector3(0, 0, 0)
-    : l.applyEuler(GALAXY_TILT).add(galaxy.position));
+    } while (used.some(q => q.distanceTo(p) < 7500) && tries < 200);
+    n.pos = p;
+    used.push(p);
+  });
 }
 
 /* 단위 원 (XZ) — 작도용 궤도원/자기원 공유 지오메트리 */
@@ -747,24 +745,18 @@ function makeCompass(group) {
   return { mat };
 }
 
-let clusters = [];         /* 어절 성단 — {index,pos,word,deco,beacon,beaconLabel,cF,systems:[i]} */
-let words = [];            /* 어절 성단 참조 (동일) */
+let clusters = [];         /* 이름 성단 — {index,pos,word,deco,beacon,beaconLabel,cF,systems:[i]} */
+let words = [];            /* 이름 성단 참조 (동일) */
 let systems = [];          /* 음절 계 — {index,wordIndex,clusterIndex,char,pos,group,star,jamos:[...]} */
 let universe = null;       /* 모든 성단·계를 담는 그룹 */
-let curText = '';
 
-function disposeUniverse() {
-  if (!universe) return;
-  universe.traverse(o => {
+function disposeNode(root) {
+  root.traverse(o => {
     if (o.isCSS2DObject) o.element.remove();
     if (o.isSprite) return;
     if (o.geometry && o.geometry !== unitCircleGeo && o.geometry !== compassGeo) o.geometry.dispose();
   });
-  scene.remove(universe);
-  universe = null;
-  clusters = [];
-  words = [];
-  systems = [];
+  if (root.parent) root.parent.remove(root);
 }
 
 function makeLabelEl(html, color, onClick) {
@@ -776,23 +768,17 @@ function makeLabelEl(html, color, onClick) {
   return new CSS2DObject(el);
 }
 
-function buildAll(text) {
-  disposeUniverse();
+/* v13 곡선은 모두 rmax = R0 으로 정규화되어 있다 → 모든 계 공통 스케일 */
+const SCALE = MAX_ORBIT / R0;
 
-  const wordList = parseText(text);
-  if (!wordList.length) return;
-
-  /* v13 곡선은 모두 rmax = R0 으로 정규화되어 있다 → 모든 계 공통 스케일 */
-  const SCALE = MAX_ORBIT / R0;
-
-  universe = new THREE.Group();
-
-  const clusterPos = placeClusters(wordList.length);
-
-  wordList.forEach((wd, wi) => {
-    const cpos = clusterPos[wi];
+/* 이름 하나치 성단을 짓는다 — b = {ref:{text,pos}, name, sylls} */
+function buildCluster(b, wi) {
+    const cpos = b.ref.pos;
+    const cGroup = new THREE.Group();
+    universe.add(cGroup);
     const wordEntry = {
-      index: wi, clusterIndex: wi, wordIndex: wi, pos: cpos, firstWord: wd.word, word: wd.word,
+      index: wi, clusterIndex: wi, wordIndex: wi, pos: cpos, firstWord: b.name, word: b.name,
+      group: cGroup, sysStart: systems.length,
       deco: null, beacon: null, beaconLabel: null, cF: 1, systems: [],
     };
 
@@ -845,27 +831,27 @@ function buildAll(text) {
       jamoFields().forEach(f => deco.add(f));
       deco.position.copy(cpos);
       deco.children.forEach(f => { f.visible = showStars; });
-      universe.add(deco);
+      cGroup.add(deco);
       wordEntry.deco = deco;
     }
 
     /* --- 은하 뷰 성단 표지 (광점 + 라벨) --- */
     const beacon = makeGlowSprite(2400);
     beacon.position.copy(cpos);
-    universe.add(beacon);
+    cGroup.add(beacon);
     wordEntry.beacon = beacon;
 
     const beaconLabel = makeLabelEl(
-      `<span class="ring-icon" style="color:#cfd8ff"></span><span class="name">${wd.word} 星團</span>`,
+      `<span class="ring-icon" style="color:#cfd8ff"></span><span class="name">${b.name} 星團</span>`,
       null, () => flyToWord(wi));
     beaconLabel.element.classList.add('cluster-label');
     beaconLabel.position.copy(cpos);
-    universe.add(beaconLabel);
+    cGroup.add(beaconLabel);
     wordEntry.beaconLabel = beaconLabel;
 
-    /* --- 어절 내 음절 = 계 (어절 성단 중심 주변에 배치 — 기존 대비 2배 거리) --- */
-    const sylPos = placeSystems(wd.sylls.length, 2);
-    wd.sylls.forEach((sd, si) => {
+    /* --- 이름 안의 음절 = 계 (성단 중심 주변에 배치 — 기존 대비 2배 거리) --- */
+    const sylPos = placeSystems(b.sylls.length, 2);
+    b.sylls.forEach((sd, si) => {
       const sysIndex = systems.length;
       const pos = cpos.clone().add(sylPos[si]);
       const group = new THREE.Group();
@@ -1046,21 +1032,21 @@ function buildAll(text) {
         });
       });
 
-      universe.add(group);
+      cGroup.add(group);
       wordEntry.systems.push(sysIndex);
       systems.push({
         index: sysIndex, wordIndex: wi, clusterIndex: wi,
-        char: sd.char, word: wd.word, el: sd.el,
+        char: sd.char, word: b.name, el: sd.el,
         onset: sd.onset, vowel: sd.vowel, coda: sd.coda,
         pos, group, star, sunLabel, sunOffLabel, compass, marker, jamos, SCALE, sysF: 1,
       });
     });
 
-    words.push(wordEntry);
-    clusters.push(wordEntry);
-  });
+  return wordEntry;
+}
 
-  // Populate dropdown menus
+// Populate dropdown menus
+function refreshDropdowns() {
   const wordsDropdown = document.getElementById('dropdown-words');
   const clustersDropdown = document.getElementById('dropdown-clusters');
 
@@ -1089,9 +1075,41 @@ function buildAll(text) {
       clustersDropdown.appendChild(btn);
     });
   }
+}
 
+/* nameList = [{text, pos}] — 우주에 심은 이름들 + 입력 중인 이름 하나(맨 뒤).
+   이미 지어 둔 성단은 그대로 두고 달라진 성단부터 뒤만 다시 짓는다.
+   (통째로 다시 지으면 심어 둔 이름의 별밭이 타자마다 새로 뿌려지고,
+    이름이 쌓일수록 한 자 칠 때마다 우주 전체를 짓느라 손이 굼떠진다) */
+function buildAll(nameList) {
+  if (!universe) { universe = new THREE.Group(); scene.add(universe); }
+
+  const built = [];
+  for (const n of nameList) {
+    const sylls = parseName(n.text);
+    if (sylls.length) built.push({ ref: n, name: n.text.trim(), sylls });
+  }
+  assignClusterPos(built.map(b => b.ref));
+
+  let keep = 0;
+  while (keep < clusters.length && keep < built.length
+    && clusters[keep].word === built[keep].name) keep++;
+
+  for (let i = clusters.length - 1; i >= keep; i--) {
+    disposeNode(clusters[i].group);
+    systems.length = clusters[i].sysStart;
+  }
+  clusters.length = keep;
+  words.length = keep;
+
+  for (let wi = keep; wi < built.length; wi++) {
+    const e = buildCluster(built[wi], wi);
+    words.push(e);
+    clusters.push(e);
+  }
+
+  refreshDropdowns();
   syncReadingButton();
-  scene.add(universe);
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -1408,6 +1426,8 @@ function updateScaleHUD() {
     lastScaleName = name;
     scaleNameEl.textContent = name;
   }
+  /* 이름이 여럿 심긴 우주에선 풀이 대상도 지금 다가선 성단을 따라간다 */
+  if (word && word.word !== lastReadingName) syncReadingButton();
 
   // 00계 화면단(d < 700)이면서 행성 확대 오버레이(letter-overlay)가 안 열렸을 때만 방위 표시기(컴퍼스) 노출
   const compassHudEl = document.getElementById('compass-hud');
@@ -1651,7 +1671,7 @@ function closeLetter() {
 document.getElementById('letter-close').addEventListener('click', closeLetter);
 
 /* ═════════════════════════════════════════════════════════════
-   이름풀이 — 첫 어절의 음양·오행을 세어 우주 위에 세로로 편다
+   이름풀이 — 다가선 이름의 음양·오행을 세어 우주 위에 세로로 편다
 ═════════════════════════════════════════════════════════════ */
 const readingOverlayEl = document.getElementById('reading-overlay');
 const btnReading = document.getElementById('btn-reading');
@@ -1662,8 +1682,10 @@ const readingName = () => {
   return word ? word.word : (words.length ? words[0].word : '');
 };
 
+let lastReadingName = '';
 function syncReadingButton() {
   const n = readingName();
+  lastReadingName = n;
   btnReading.querySelector('.br-name').textContent = n;
   btnReading.classList.toggle('on', !!n);
 }
@@ -1700,15 +1722,45 @@ document.getElementById('reading-close').addEventListener('click', closeReading)
 
 /* ═════════════════════════════════════════════════════════════
    입력 → 성단·계 재구성
+   savedNames = 엔터로 우주에 심은 이름들 · draft = 지금 적고 있는 이름
+   (draft는 언제나 맨 뒤 성단이라, 심어도 자리가 그대로다)
 ═════════════════════════════════════════════════════════════ */
 const input = document.getElementById('nameInput');
+const savedNames = [];
+let draft = { text: '', pos: null };
+
+const normName = (s) => [...s].filter(c => decompose(c) || c === ' ').join('');
+
+/* fly=true면 지금 적고 있는 이름의 첫 계로 카메라를 옮긴다 */
+function rebuildUniverse(fly) {
+  buildAll(draft.text.trim() ? [...savedNames, draft] : savedNames);
+  if (!fly) return;
+  const c = clusters[clusters.length - 1];
+  if (c && c.systems.length) flyToSystem(c.systems[0]);
+}
+
+/* 조합 중인 낱자(ㄱ, ㅏ)는 decompose가 걸러 낸다. input.value는 건드리지 않는다
+   — 되쓰면 IME 조합이 깨진다.
+   한 글자에도 조합 이벤트가 서너 번 오므로, 손이 멈춘 뒤에 한 번만 짓는다 */
+let buildTimer = 0;
 input.addEventListener('input', () => {
-  const norm = [...input.value].filter(c => decompose(c) || c === ' ' || c === '.').join('');
-  if (norm.trim() && norm !== curText) {
-    curText = norm;
-    buildAll(norm);
-    if (systems.length) flyToSystem(0);
-  }
+  const norm = normName(input.value);
+  if (norm === draft.text) return;
+  draft.text = norm;
+  clearTimeout(buildTimer);
+  buildTimer = setTimeout(() => rebuildUniverse(true), 180);
+});
+
+/* 엔터 → 지금 이름을 우주에 남기고 입력창을 비워 다음 이름을 받는다 */
+input.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  e.preventDefault();
+  if (!parseName(draft.text).length) return;
+  clearTimeout(buildTimer);
+  savedNames.push(draft);
+  draft = { text: '', pos: null };
+  input.value = '';
+  rebuildUniverse(false);
 });
 
 /* ═════════════════════════════════════════════════════════════
@@ -1965,6 +2017,6 @@ addEventListener('resize', () => {
 });
 
 /* ---------------- 시작 ---------------- */
-curText = '김수환무';
-buildAll(curText);
+draft.text = normName(input.value);
+rebuildUniverse(false);
 animate()
