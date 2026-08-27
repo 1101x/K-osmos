@@ -1,0 +1,7 @@
+# macOS
+.DS_Store
+._*
+
+# iCloud 다운로드 대기 파일
+*.icloud
+
