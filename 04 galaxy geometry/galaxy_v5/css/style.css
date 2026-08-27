@@ -1,0 +1,485 @@
+/* ═══════════════════════════════════════════════════════════
+   UI 베이스: 01 solar system
+═══════════════════════════════════════════════════════════ */
+:root {
+  --ui-bg: rgba(8, 10, 16, 0.72);
+  --ui-border: rgba(255, 255, 255, 0.12);
+  --txt: #e8eaf0;
+  --txt-dim: #9aa0ae;
+  --accent: #a783ed;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: var(--txt);
+  font-family: "Helvetica Neue", "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#scene-container {
+  position: fixed;
+  inset: 0;
+}
+
+#scene-container canvas {
+  display: block;
+}
+
+/* ---------- 상단 헤더 — 타이틀 텍스트만 ---------- */
+#topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  pointer-events: none;
+}
+
+#topbar .brand {
+  pointer-events: auto;
+}
+
+#topbar h1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+}
+
+#topbar .menu {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  pointer-events: auto;
+}
+
+.navlink {
+  background: none;
+  border: 1px solid var(--ui-border);
+  border-radius: 4px;
+  color: var(--txt);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.navlink:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- 이름 입력 (상단 중앙) ---------- */
+#input-wrap {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: var(--ui-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--ui-border);
+  border-radius: 40px;
+  padding: 8px 24px;
+}
+
+#nameInput {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--txt);
+  text-align: center;
+  font-family: inherit;
+  font-size: 17px;
+  letter-spacing: 0.12em;
+  width: 340px;
+}
+
+#nameInput::placeholder {
+  color: rgba(232, 234, 240, 0.35);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+/* ---------- 스케일 HUD ---------- */
+#scale-hud {
+  position: fixed;
+  left: 26px;
+  top: 44%;
+  z-index: 15;
+  pointer-events: none;
+}
+
+#scale-hud .scale-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--txt-dim);
+  margin-bottom: 6px;
+}
+
+#scale-hud .scale-name {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
+}
+
+#scale-hud .scale-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.08em;
+}
+
+/* ---------- 라벨 (CSS2D) ---------- */
+.planet-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+  transform: translate(12px, -6px);
+  white-space: nowrap;
+}
+
+.planet-label .ring-icon {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.planet-label .name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+.planet-label:hover .ring-icon,
+.planet-label.selected .ring-icon {
+  background: currentColor;
+}
+
+.planet-label.sun-label .name {
+  color: #ffd76a;
+  letter-spacing: 0.2em;
+}
+
+.planet-label.cluster-label .name {
+  color: #cfd8ff;
+  letter-spacing: 0.2em;
+}
+
+/* ---------- 오방 컴퍼스 라벨 (02 geometry_v3 UI) ---------- */
+.compass-label {
+  font-size: 10px;
+  color: rgba(233, 223, 200, 0.55);
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+.sun-off-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.12em;
+  pointer-events: auto;
+  user-select: none;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.95);
+  cursor: pointer;
+}
+
+/* ---------- 하단 타임바 ---------- */
+#timebar {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 10px 24px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+}
+
+#timebar .datetime {
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 재생 컨트롤 — 타임바와 같은 글래스 결, 원형 아웃라인 */
+#timebar .transport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tp-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--txt-dim);
+  background: transparent;
+  border: 1px solid var(--ui-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s, background 0.18s;
+}
+
+.tp-btn:hover {
+  color: var(--txt);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+/* 현재 상태(재생 중이면 ▶, 멈췄으면 ⏸)를 채워서 표시 */
+.tp-btn.active {
+  background: #e8e0cc;
+  border-color: #e8e0cc;
+  color: #0a0c12;
+}
+
+/* ---------- 드롭다운 ---------- */
+.dropdown {
+  position: relative;
+  display: inline-block;
+  pointer-events: auto;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 140px;
+  z-index: 100;
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.dropdown-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown-content::-webkit-scrollbar-thumb {
+  background: var(--ui-border);
+  border-radius: 2px;
+}
+
+.dropdown-content button {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  color: var(--txt);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: right;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.05em;
+}
+
+.dropdown-content button:hover {
+  color: var(--accent);
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.navlink .arrow {
+  font-size: 9px;
+  margin-left: 5px;
+  opacity: 0.7;
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.dropdown:hover .navlink .arrow {
+  transform: rotate(180deg);
+}
+
+/* ---------- 레터 오버레이 (03 letter system) ---------- */
+#letter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  opacity: 1;
+  transition: opacity 0.45s;
+}
+
+#letter-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#letter-stage {
+  position: absolute;
+  inset: 0;
+}
+
+#letter-close {
+  position: absolute;
+  top: 20px;
+  right: 26px;
+  z-index: 45;
+  background: none;
+  border: 1px solid var(--ui-border);
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  color: var(--txt-dim);
+  font-size: 15px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+#letter-close:hover {
+  color: var(--txt);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#letter-panel {
+  position: absolute;
+  left: 26px;
+  bottom: 92px;
+  z-index: 45;
+  width: 300px;
+  padding: 22px 24px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+#letter-panel .eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+#letter-panel h2 {
+  font-size: 34px;
+  font-weight: 700;
+}
+
+#letter-panel .jamo {
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  color: var(--txt-dim);
+  margin: 6px 0 12px;
+}
+
+#letter-panel .desc {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #c6cad4;
+}
+
+#letter-title {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  font-weight: 300;
+  letter-spacing: 0.18em;
+  font-size: 15px;
+  color: var(--txt-dim);
+  pointer-events: none;
+}
+
+/* ---------- 우하단 방위 표시기 (컴퍼스) ---------- */
+#compass-hud {
+  position: fixed;
+  right: 30px;
+  bottom: 30px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  pointer-events: auto;
+  background: rgba(8, 10, 16, 0.45);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  padding: 8px;
+  transition: background 0.2s, border-color 0.2s, opacity 0.3s, transform 0.3s;
+}
+
+#compass-hud:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+#compass-hud.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px) scale(0.9);
+}
+
+/* ---------- 우중앙 컨트롤 패널 ---------- */
+#right-controls {
+  position: fixed;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+@media (max-width: 720px) {
+  #timebar {
+    gap: 14px;
+    padding: 8px 16px;
+  }
+
+  #timebar .transport {
+    gap: 6px;
+  }
+
+  #letter-panel {
+    left: 14px;
+    right: 14px;
+    width: auto;
+  }
+}

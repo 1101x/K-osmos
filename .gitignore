@@ -5,14 +5,3 @@
 # iCloud 다운로드 대기 파일
 *.icloud
 
-# galaxy_v6 폴더만 GitHub에 올림 - 나머지 전부 무시
-00 mater/
-01 solar system/
-02 geometry system/
-03 letter system/
-04 galaxy geometry/galaxy_v5/
-css/
-js/
-src/
-index.html
-스케치.psd
