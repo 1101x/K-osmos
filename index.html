@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>한글 이름 분석계</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+
+<body>
+
+  <header id="topbar">
+    <div class="brand">
+      <h3>한글 이름 분석계</h3>
+    </div>
+  </header>
+
+  <!-- 우중앙 컨트롤 패널 -->
+  <div id="right-controls">
+    <button class="navlink glyph-btn" id="btn-toggle-stars"><b>星</b><em>별</em></button>
+    <button class="navlink glyph-btn" id="btn-toggle-orbit"><b>軌</b><em>궤도</em></button>
+    <button class="navlink glyph-btn" id="btn-toggle-name"><b>名</b><em>이름</em></button>
+  </div>
+
+  <!-- 이름 입력 — 펼친 두루마리 (SVG) -->
+  <div id="input-wrap">
+    <svg class="scroll-svg" viewBox="0 0 500 60" xmlns="http://www.w3.org/2000/svg">
+      <!-- 중앙 종이 -->
+      <rect class="scroll-paper" x="26" y="10" width="448" height="40" />
+      <!-- 왼쪽 축 상단/본체/하단 -->
+      <rect class="scroll-cap" x="17" y="2" width="6" height="4" />
+      <rect class="scroll-rod" x="14" y="6" width="12" height="48" />
+      <rect class="scroll-cap" x="17" y="54" width="6" height="4" />
+      <!-- 오른쪽 축 상단/본체/하단 -->
+      <rect class="scroll-cap" x="477" y="2" width="6" height="4" />
+      <rect class="scroll-rod" x="474" y="6" width="12" height="48" />
+      <rect class="scroll-cap" x="477" y="54" width="6" height="4" />
+    </svg>
+    <input id="nameInput" type="text" maxlength="40" value="김수환무" placeholder="이름을 적으세요">
+  </div>
+
+  <div id="scene-container"></div>
+
+  <div id="scale-hud">
+    <p class="scale-label">지금 보고 있는 곳</p>
+    <p class="scale-name" id="scale-name"></p>
+    <p class="scale-hint">스크롤하여 확대, 우클릭으로 이동</p>
+  </div>
+
+  <!-- 좌하단 이름풀이 열기 -->
+  <button id="btn-reading">
+    <span class="br-name"></span>
+    <span class="br-label">이름풀이 보기</span>
+    <span class="br-arrow">〉</span>
+  </button>
+
+  <!-- 이름풀이 — 우주 위에 뜨는 세로쓰기 판 -->
+  <div id="reading-overlay" class="hidden">
+    <button id="reading-close" aria-label="close">✕</button>
+    <div id="reading-paper">
+      <div class="rp-flow">
+        <div class="rp-counts" id="reading-counts"></div>
+        <h2 class="rp-name" id="reading-name"></h2>
+        <div class="rp-traits" id="reading-traits"></div>
+        <p class="rp-advice" id="reading-advice"></p>
+      </div>
+    </div>
+  </div>
+
+  <footer id="timebar">
+    <div class="datetime" id="datetime">—</div>
+    <div class="transport">
+      <button class="tp-btn" id="tp-rewind" title="처음부터 다시 작도" aria-label="맨 뒤로">⟪</button>
+      <button class="tp-btn" id="tp-pause" title="일시정지" aria-label="일시정지">⏸</button>
+      <button class="tp-btn" id="tp-play" title="재생" aria-label="재생">▶</button>
+      <button class="tp-btn" id="tp-end" title="작도 완료" aria-label="맨 앞으로">⟫</button>
+    </div>
+  </footer>
+
+  <!-- 행성 클릭 → 자소 레터링 · 훈민정음 한지 UI -->
+  <div id="letter-overlay" class="hidden">
+    <div id="letter-stage"></div>
+
+    <button id="letter-close" aria-label="close">✕</button>
+
+    <aside id="letter-panel" class="hanji">
+      <div class="hanji-rule"></div>
+      <header class="hp-head">
+        <div class="hp-orbitbox">
+          <canvas id="letter-orbit" width="280" height="200"></canvas>
+          <p class="hp-family" id="letter-family"></p>
+        </div>
+        <h2 id="letter-char">—</h2>
+      </header>
+      <div class="hp-cols">
+        <dl class="hp-rows" id="letter-table"></dl>
+        <dl class="hp-rows right" id="letter-table2"></dl>
+      </div>
+      <footer class="hp-foot">
+        <p class="hp-quote" id="letter-quote"></p>
+        <div class="seal">訓民<br>正音</div>
+      </footer>
+      <div class="hanji-rule-bottom"></div>
+    </aside>
+  </div>
+
+  <!-- 우하단 방위 표시기 (컴퍼스) -->
+  <div id="compass-hud" class="hidden">
+    <canvas id="compass-canvas" width="90" height="90"></canvas>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
