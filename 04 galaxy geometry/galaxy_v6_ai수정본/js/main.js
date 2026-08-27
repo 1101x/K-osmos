@@ -663,7 +663,7 @@ const unitCircleGeo = (() => {
   return new THREE.BufferGeometry().setFromPoints(pts);
 })();
 
-/* 모음 띠 — geometry_v13 drawVowelPlanet 규칙: 地(ㅡ)=가로띠 · 人(ㅣ)=세로띠
+/* 모음 띠 — geometry_v13 drawVowelPlanet 규칙: 地(ㅡ)=가로띠 · 人(ㅣ)=세로띠 */
 function makeBelt(mesh, radius, inner, outer, rotX, rotZ, tint = '#e8dcc2') {
   const ringGeo = new THREE.RingGeometry(radius * inner, radius * outer, 96);
   const uv = ringGeo.attributes.uv;
@@ -686,14 +686,14 @@ function makeSaturnRing(mesh, radius, o) {
   const bh = o ? (o.beltH | 0) : 1, bv = o ? (o.beltV | 0) : 0;
   const s = o && o.yang === false ? -1 : 1;
   /* 地 — 적도면 가로띠 (개수만큼 바깥으로 겹쳐 쌓음) */
-for (let k = 0; k < bh; k++) {
-  makeBelt(mesh, radius, 1.4 + k * 0.5, 2.4 + k * 0.5, Math.PI / 2 - 0.35, 0);
+  for (let k = 0; k < bh; k++) {
+    makeBelt(mesh, radius, 1.4 + k * 0.5, 2.4 + k * 0.5, Math.PI / 2 - 0.35, 0);
+  }
+  /* 人 — 극면 세로띠 (음양에 따라 기울기 방향이 반대) */
+  for (let k = 0; k < bv; k++) {
+    makeBelt(mesh, radius, 1.4 + k * 0.5, 2.4 + k * 0.5, 0, s * (0.38 + k * 0.3));
+  }
 }
-/* 人 — 극면 세로띠 (음양에 따라 기울기 방향이 반대) */
-for (let k = 0; k < bv; k++) {
-  makeBelt(mesh, radius, 1.4 + k * 0.5, 2.4 + k * 0.5, 0, s * (0.38 + k * 0.3));
-}
-
 
 /* 자음 천체 — 본체 없이 기울지 않은 正圓 링 띠만. 오방색으로 물들인다.
    병서(쌍둥이)는 궤도면 자체를 5° 틀어 2겹으로 겹친다 — 띠는 한 겹 */
@@ -1092,879 +1092,879 @@ function buildAll(text) {
 
   syncReadingButton();
   scene.add(universe);
+}
 
+/* ═════════════════════════════════════════════════════════════
+   카메라 연출 / 선택 (01 베이스 + 뎁스 4 연결)
+═════════════════════════════════════════════════════════════ */
+let camTween = null;
+let showStars = true;
+let showSun = true;
+let showOrbit = true;
+let showName = true;
 
-  /* ═════════════════════════════════════════════════════════════
-     카메라 연출 / 선택 (01 베이스 + 뎁스 4 연결)
-  ═════════════════════════════════════════════════════════════ */
-  let camTween = null;
-  let showStars = true;
-  let showSun = true;
-  let showOrbit = true;
-  let showName = true;
+function toggleStarsVisibility() {
+  showStars = !showStars;
+  if (galaxy) galaxy.visible = showStars;
+  if (starsWarm) starsWarm.visible = showStars;
+  if (starsCool) starsCool.visible = showStars;
+  if (clusterCore) clusterCore.visible = showStars;
+  if (clusterStream) clusterStream.visible = showStars;
+  if (jamoStars) jamoStars.visible = showStars;
 
-  function toggleStarsVisibility() {
-    showStars = !showStars;
-    if (galaxy) galaxy.visible = showStars;
-    if (starsWarm) starsWarm.visible = showStars;
-    if (starsCool) starsCool.visible = showStars;
-    if (clusterCore) clusterCore.visible = showStars;
-    if (clusterStream) clusterStream.visible = showStars;
-    if (jamoStars) jamoStars.visible = showStars;
-
-    if (universe) {
-      universe.traverse(child => {
-        if (child.isPoints) {
-          child.visible = showStars;
-        }
-      });
-    }
-
-    const btn = document.getElementById('btn-toggle-stars');
-    if (btn) {
-      btn.style.opacity = showStars ? '1' : '0.4';
-    }
+  if (universe) {
+    universe.traverse(child => {
+      if (child.isPoints) {
+        child.visible = showStars;
+      }
+    });
   }
 
-  function flyTo(getTargetPos, distance, duration = 1.6, onDone = null) {
-    const toTargetFn = () => getTargetPos();
-    const toPosFn = () => {
-      const t = getTargetPos();
-      const dir = new THREE.Vector3().subVectors(camera.position, t).normalize();
-      if (dir.lengthSq() === 0) dir.set(0, 0.4, 1).normalize();
-      dir.y = Math.max(dir.y, 0.25);
-      dir.normalize();
-      return t.clone().addScaledVector(dir, distance);
-    };
-    camTween = {
-      t: 0, dur: duration,
-      fromPos: camera.position.clone(),
-      fromTarget: controls.target.clone(),
-      toPosFn, toTargetFn, onDone,
-    };
+  const btn = document.getElementById('btn-toggle-stars');
+  if (btn) {
+    btn.style.opacity = showStars ? '1' : '0.4';
   }
+}
 
-  function nearestSystem() {
-    let best = null, bestD = Infinity;
-    for (const s of systems) {
-      const d = camera.position.distanceTo(s.pos);
-      if (d < bestD) { bestD = d; best = s; }
-    }
-    return { sys: best, d: bestD };
-  }
-
-  function nearestWord() {
-    let best = null, bestD = Infinity;
-    for (const w of words) {
-      const d = camera.position.distanceTo(w.pos);
-      if (d < bestD) { bestD = d; best = w; }
-    }
-    return { word: best, d: bestD };
-  }
-
-  function nearestCluster() {
-    let best = null, bestD = Infinity;
-    for (const c of clusters) {
-      const d = camera.position.distanceTo(c.pos);
-      if (d < bestD) { bestD = d; best = c; }
-    }
-    return { cluster: best, d: bestD };
-  }
-
-  function flyToSystem(i) {
-    const s = systems[i];
-    if (!s) return;
-    flyTo(() => s.pos.clone(), 90, 1.8);
-  }
-  function flyToWord(wi) {
-    const w = words[wi];
-    if (!w) return;
-    flyTo(() => w.pos.clone(), 700, 2.0);
-  }
-  function flyToCluster(ci) {
-    const c = clusters[ci];
-    if (!c) return;
-    flyTo(() => c.pos.clone(), 8000, 2.2);
-  }
-  /* 어절 성단 = 음절 계 여러 개를 함께 보는 거리 */
-  function goCluster() {
-    const { word } = nearestWord();
-    flyTo(() => (word ? word.pos.clone() : new THREE.Vector3(0, 0, 0)), 700, 2.0);
-  }
-  function goGalaxy() {
-    flyTo(() => new THREE.Vector3(0, 0, 0), 62000, 2.8);
-  }
-
-  /* 행성 클릭 → 줌인 → 레터 오버레이 (뎁스 4) */
-  function selectPlanet(si, ji) {
-    const s = systems[si];
-    if (!s) return;
-    const jm = s.jamos[ji];
-    if (!jm) return;
-    document.querySelectorAll('.planet-label').forEach(el => el.classList.remove('selected'));
-    jm.planetLabel.element.classList.add('selected');
-    const dist = jm.sz * (jm.type === 'vowel' ? 8 : 6);
-    flyTo(() => jm.planet.getWorldPosition(new THREE.Vector3()), dist, 1.5, () => openLetter(jm, s));
-  }
-
-  document.getElementById('btn-system')?.addEventListener('click', () => {
-    const { sys } = nearestSystem();
-    if (sys) flyToSystem(sys.index);
-  });
-  document.getElementById('btn-cluster')?.addEventListener('click', goCluster);
-  document.getElementById('btn-galaxy')?.addEventListener('click', goGalaxy);
-
-  document.getElementById('btn-toggle-stars').addEventListener('click', toggleStarsVisibility);
-
-
-
-  function toggleOrbitVisibility() {
-    showOrbit = !showOrbit;
-    const btn = document.getElementById('btn-toggle-orbit');
-    if (btn) {
-      btn.style.opacity = showOrbit ? '1' : '0.4';
-    }
-  }
-  document.getElementById('btn-toggle-orbit').addEventListener('click', toggleOrbitVisibility);
-
-  function toggleNameVisibility() {
-    showName = !showName;
-    const btn = document.getElementById('btn-toggle-name');
-    if (btn) {
-      btn.style.opacity = showName ? '1' : '0.4';
-    }
-  }
-  document.getElementById('btn-toggle-name').addEventListener('click', toggleNameVisibility);
-
-  function alignCompass() {
-    const T = controls.target.clone();
-    const dist = camera.position.distanceTo(T);
-    // Y축 바로 위에서 아래로 수직으로 내려다보는 탑뷰 (0점 정렬: 북쪽=위, 남쪽=아래, 동쪽=우측, 서쪽=좌측)
-    const targetPos = T.clone().add(new THREE.Vector3(0, dist, 0.001));
-
-    camTween = {
-      t: 0, dur: 1.2,
-      fromPos: camera.position.clone(),
-      fromTarget: controls.target.clone(),
-      toPosFn: () => targetPos.clone(),
-      toTargetFn: () => T.clone(),
-      onDone: null
-    };
-  }
-  document.getElementById('compass-hud').addEventListener('click', alignCompass);
-
-  function updateCompassHUD() {
-    const canvas = document.getElementById('compass-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-
-    ctx.clearRect(0, 0, w, h);
-
-    // Faint circle
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 32, 0, Math.PI * 2);
-    ctx.stroke();
-
-    const T = controls.target;
-    const center = new THREE.Vector3().copy(T);
-    const east = new THREE.Vector3().copy(T).add(new THREE.Vector3(1, 0, 0));
-    const west = new THREE.Vector3().copy(T).add(new THREE.Vector3(-1, 0, 0));
-    const south = new THREE.Vector3().copy(T).add(new THREE.Vector3(0, 0, 1));
-    const north = new THREE.Vector3().copy(T).add(new THREE.Vector3(0, 0, -1));
-
-    center.project(camera);
-    east.project(camera);
-    west.project(camera);
-    south.project(camera);
-    north.project(camera);
-
-    const dEast = new THREE.Vector2(east.x - center.x, center.y - east.y);
-    const dWest = new THREE.Vector2(west.x - center.x, center.y - west.y);
-    const dSouth = new THREE.Vector2(south.x - center.x, center.y - south.y);
-    const dNorth = new THREE.Vector2(north.x - center.x, center.y - north.y);
-
-    if (dEast.lengthSq() === 0 || dSouth.lengthSq() === 0) return;
-
-    dEast.normalize().multiplyScalar(28);
-    dWest.normalize().multiplyScalar(28);
-    dSouth.normalize().multiplyScalar(28);
-    dNorth.normalize().multiplyScalar(28);
-
-    ctx.lineWidth = 1.5;
-
-    // West-East (Gold-Wood) line
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.beginPath();
-    ctx.moveTo(cx + dWest.x, cy + dWest.y);
-    ctx.lineTo(cx + dEast.x, cy + dEast.y);
-    ctx.stroke();
-
-    // North-South (Water-Fire) line
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.beginPath();
-    ctx.moveTo(cx + dNorth.x, cy + dNorth.y);
-    ctx.lineTo(cx + dSouth.x, cy + dSouth.y);
-    ctx.stroke();
-
-    // Text labels
-    ctx.font = '300 12px "Soonbatang", "SunBatang", serif';
-    ctx.fillStyle = 'rgba(232, 234, 240, 0.85)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const textDist = 41;
-    const pNorth = dNorth.clone().normalize().multiplyScalar(textDist);
-    const pSouth = dSouth.clone().normalize().multiplyScalar(textDist);
-    const pEast = dEast.clone().normalize().multiplyScalar(textDist);
-    const pWest = dWest.clone().normalize().multiplyScalar(textDist);
-
-    ctx.fillText('北', cx + pNorth.x, cy + pNorth.y);
-    ctx.fillText('南', cx + pSouth.x, cy + pSouth.y);
-    ctx.fillText('東', cx + pEast.x, cy + pEast.y);
-    ctx.fillText('西', cx + pWest.x, cy + pWest.y);
-  }
-  addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      if (!readingOverlayEl.classList.contains('hidden')) closeReading();
-      else if (!letterOverlayEl.classList.contains('hidden')) closeLetter();
-      else { const { sys } = nearestSystem(); if (sys) flyToSystem(sys.index); }
-    }
-  });
-
-  /* 캔버스 클릭 → 레이캐스트 행성 선택 (계 뎁스에서만) */
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
-  let downXY = null;
-  renderer.domElement.addEventListener('pointerdown', (e) => { downXY = [e.clientX, e.clientY]; });
-  renderer.domElement.addEventListener('pointerup', (e) => {
-    if (!downXY) return;
-    const moved = Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]);
-    downXY = null;
-    if (moved > 5) return;
-    if (!letterOverlayEl.classList.contains('hidden')) return;
-    const { d } = nearestSystem();
-    if (d > 700) return;
-    pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-    raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects(systems.flatMap(s => s.jamos.map(y => y.planet)), true);
-    if (hits.length) {
-      let o = hits[0].object;
-      while (o && o.userData.sysIndex === undefined) o = o.parent;
-      if (o) selectPlanet(o.userData.sysIndex, o.userData.jamoIndex);
-    }
-  });
-
-  /* ---------------- 시간/재생 UI ---------------- */
-  const dtEl = document.getElementById('datetime');
-
-  /* 재생 컨트롤 — v13의 ⟪ ⏸ ▶ ⟫ 규칙 그대로 (되감기·완료는 재생 상태로 복귀) */
-  let paused = false;
-  const btnPause = document.getElementById('tp-pause');
-  const btnPlay = document.getElementById('tp-play');
-  function setPaused(p) {
-    paused = p;
-    btnPause.classList.toggle('active', p);
-    btnPlay.classList.toggle('active', !p);
-  }
-  const eachJamo = (fn) => systems.forEach(s => s.jamos.forEach(fn));
-  btnPause.onclick = () => setPaused(true);
-  btnPlay.onclick = () => setPaused(false);
-  /* ⟪ 처음부터 다시 작도 · ⟫ 작도 즉시 완료 */
-  document.getElementById('tp-rewind').onclick = () => {
-    eachJamo(y => { y.age = y.age0; y.tc = 0; });
-    setPaused(false);
+function flyTo(getTargetPos, distance, duration = 1.6, onDone = null) {
+  const toTargetFn = () => getTargetPos();
+  const toPosFn = () => {
+    const t = getTargetPos();
+    const dir = new THREE.Vector3().subVectors(camera.position, t).normalize();
+    if (dir.lengthSq() === 0) dir.set(0, 0.4, 1).normalize();
+    dir.y = Math.max(dir.y, 0.25);
+    dir.normalize();
+    return t.clone().addScaledVector(dir, distance);
   };
-  document.getElementById('tp-end').onclick = () => {
-    eachJamo(y => { y.age = REVEAL_DUR; });
-    setPaused(false);
+  camTween = {
+    t: 0, dur: duration,
+    fromPos: camera.position.clone(),
+    fromTarget: controls.target.clone(),
+    toPosFn, toTargetFn, onDone,
   };
+}
+
+function nearestSystem() {
+  let best = null, bestD = Infinity;
+  for (const s of systems) {
+    const d = camera.position.distanceTo(s.pos);
+    if (d < bestD) { bestD = d; best = s; }
+  }
+  return { sys: best, d: bestD };
+}
+
+function nearestWord() {
+  let best = null, bestD = Infinity;
+  for (const w of words) {
+    const d = camera.position.distanceTo(w.pos);
+    if (d < bestD) { bestD = d; best = w; }
+  }
+  return { word: best, d: bestD };
+}
+
+function nearestCluster() {
+  let best = null, bestD = Infinity;
+  for (const c of clusters) {
+    const d = camera.position.distanceTo(c.pos);
+    if (d < bestD) { bestD = d; best = c; }
+  }
+  return { cluster: best, d: bestD };
+}
+
+function flyToSystem(i) {
+  const s = systems[i];
+  if (!s) return;
+  flyTo(() => s.pos.clone(), 90, 1.8);
+}
+function flyToWord(wi) {
+  const w = words[wi];
+  if (!w) return;
+  flyTo(() => w.pos.clone(), 700, 2.0);
+}
+function flyToCluster(ci) {
+  const c = clusters[ci];
+  if (!c) return;
+  flyTo(() => c.pos.clone(), 8000, 2.2);
+}
+/* 어절 성단 = 음절 계 여러 개를 함께 보는 거리 */
+function goCluster() {
+  const { word } = nearestWord();
+  flyTo(() => (word ? word.pos.clone() : new THREE.Vector3(0, 0, 0)), 700, 2.0);
+}
+function goGalaxy() {
+  flyTo(() => new THREE.Vector3(0, 0, 0), 62000, 2.8);
+}
+
+/* 행성 클릭 → 줌인 → 레터 오버레이 (뎁스 4) */
+function selectPlanet(si, ji) {
+  const s = systems[si];
+  if (!s) return;
+  const jm = s.jamos[ji];
+  if (!jm) return;
+  document.querySelectorAll('.planet-label').forEach(el => el.classList.remove('selected'));
+  jm.planetLabel.element.classList.add('selected');
+  const dist = jm.sz * (jm.type === 'vowel' ? 8 : 6);
+  flyTo(() => jm.planet.getWorldPosition(new THREE.Vector3()), dist, 1.5, () => openLetter(jm, s));
+}
+
+document.getElementById('btn-system')?.addEventListener('click', () => {
+  const { sys } = nearestSystem();
+  if (sys) flyToSystem(sys.index);
+});
+document.getElementById('btn-cluster')?.addEventListener('click', goCluster);
+document.getElementById('btn-galaxy')?.addEventListener('click', goGalaxy);
+
+document.getElementById('btn-toggle-stars').addEventListener('click', toggleStarsVisibility);
+
+
+
+function toggleOrbitVisibility() {
+  showOrbit = !showOrbit;
+  const btn = document.getElementById('btn-toggle-orbit');
+  if (btn) {
+    btn.style.opacity = showOrbit ? '1' : '0.4';
+  }
+}
+document.getElementById('btn-toggle-orbit').addEventListener('click', toggleOrbitVisibility);
+
+function toggleNameVisibility() {
+  showName = !showName;
+  const btn = document.getElementById('btn-toggle-name');
+  if (btn) {
+    btn.style.opacity = showName ? '1' : '0.4';
+  }
+}
+document.getElementById('btn-toggle-name').addEventListener('click', toggleNameVisibility);
+
+function alignCompass() {
+  const T = controls.target.clone();
+  const dist = camera.position.distanceTo(T);
+  // Y축 바로 위에서 아래로 수직으로 내려다보는 탑뷰 (0점 정렬: 북쪽=위, 남쪽=아래, 동쪽=우측, 서쪽=좌측)
+  const targetPos = T.clone().add(new THREE.Vector3(0, dist, 0.001));
+
+  camTween = {
+    t: 0, dur: 1.2,
+    fromPos: camera.position.clone(),
+    fromTarget: controls.target.clone(),
+    toPosFn: () => targetPos.clone(),
+    toTargetFn: () => T.clone(),
+    onDone: null
+  };
+}
+document.getElementById('compass-hud').addEventListener('click', alignCompass);
+
+function updateCompassHUD() {
+  const canvas = document.getElementById('compass-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Faint circle
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const T = controls.target;
+  const center = new THREE.Vector3().copy(T);
+  const east = new THREE.Vector3().copy(T).add(new THREE.Vector3(1, 0, 0));
+  const west = new THREE.Vector3().copy(T).add(new THREE.Vector3(-1, 0, 0));
+  const south = new THREE.Vector3().copy(T).add(new THREE.Vector3(0, 0, 1));
+  const north = new THREE.Vector3().copy(T).add(new THREE.Vector3(0, 0, -1));
+
+  center.project(camera);
+  east.project(camera);
+  west.project(camera);
+  south.project(camera);
+  north.project(camera);
+
+  const dEast = new THREE.Vector2(east.x - center.x, center.y - east.y);
+  const dWest = new THREE.Vector2(west.x - center.x, center.y - west.y);
+  const dSouth = new THREE.Vector2(south.x - center.x, center.y - south.y);
+  const dNorth = new THREE.Vector2(north.x - center.x, center.y - north.y);
+
+  if (dEast.lengthSq() === 0 || dSouth.lengthSq() === 0) return;
+
+  dEast.normalize().multiplyScalar(28);
+  dWest.normalize().multiplyScalar(28);
+  dSouth.normalize().multiplyScalar(28);
+  dNorth.normalize().multiplyScalar(28);
+
+  ctx.lineWidth = 1.5;
+
+  // West-East (Gold-Wood) line
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.beginPath();
+  ctx.moveTo(cx + dWest.x, cy + dWest.y);
+  ctx.lineTo(cx + dEast.x, cy + dEast.y);
+  ctx.stroke();
+
+  // North-South (Water-Fire) line
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.beginPath();
+  ctx.moveTo(cx + dNorth.x, cy + dNorth.y);
+  ctx.lineTo(cx + dSouth.x, cy + dSouth.y);
+  ctx.stroke();
+
+  // Text labels
+  ctx.font = '300 12px "Soonbatang", "SunBatang", serif';
+  ctx.fillStyle = 'rgba(232, 234, 240, 0.85)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const textDist = 41;
+  const pNorth = dNorth.clone().normalize().multiplyScalar(textDist);
+  const pSouth = dSouth.clone().normalize().multiplyScalar(textDist);
+  const pEast = dEast.clone().normalize().multiplyScalar(textDist);
+  const pWest = dWest.clone().normalize().multiplyScalar(textDist);
+
+  ctx.fillText('北', cx + pNorth.x, cy + pNorth.y);
+  ctx.fillText('南', cx + pSouth.x, cy + pSouth.y);
+  ctx.fillText('東', cx + pEast.x, cy + pEast.y);
+  ctx.fillText('西', cx + pWest.x, cy + pWest.y);
+}
+addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!readingOverlayEl.classList.contains('hidden')) closeReading();
+    else if (!letterOverlayEl.classList.contains('hidden')) closeLetter();
+    else { const { sys } = nearestSystem(); if (sys) flyToSystem(sys.index); }
+  }
+});
+
+/* 캔버스 클릭 → 레이캐스트 행성 선택 (계 뎁스에서만) */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downXY = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { downXY = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downXY) return;
+  const moved = Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]);
+  downXY = null;
+  if (moved > 5) return;
+  if (!letterOverlayEl.classList.contains('hidden')) return;
+  const { d } = nearestSystem();
+  if (d > 700) return;
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(systems.flatMap(s => s.jamos.map(y => y.planet)), true);
+  if (hits.length) {
+    let o = hits[0].object;
+    while (o && o.userData.sysIndex === undefined) o = o.parent;
+    if (o) selectPlanet(o.userData.sysIndex, o.userData.jamoIndex);
+  }
+});
+
+/* ---------------- 시간/재생 UI ---------------- */
+const dtEl = document.getElementById('datetime');
+
+/* 재생 컨트롤 — v13의 ⟪ ⏸ ▶ ⟫ 규칙 그대로 (되감기·완료는 재생 상태로 복귀) */
+let paused = false;
+const btnPause = document.getElementById('tp-pause');
+const btnPlay = document.getElementById('tp-play');
+function setPaused(p) {
+  paused = p;
+  btnPause.classList.toggle('active', p);
+  btnPlay.classList.toggle('active', !p);
+}
+const eachJamo = (fn) => systems.forEach(s => s.jamos.forEach(fn));
+btnPause.onclick = () => setPaused(true);
+btnPlay.onclick = () => setPaused(false);
+/* ⟪ 처음부터 다시 작도 · ⟫ 작도 즉시 완료 */
+document.getElementById('tp-rewind').onclick = () => {
+  eachJamo(y => { y.age = y.age0; y.tc = 0; });
   setPaused(false);
-  function updateClockUI() {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    dtEl.textContent =
-      `${d.getFullYear()}. ${pad(d.getMonth() + 1)}. ${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-  setInterval(updateClockUI, 1000);
-  updateClockUI();
+};
+document.getElementById('tp-end').onclick = () => {
+  eachJamo(y => { y.age = REVEAL_DUR; });
+  setPaused(false);
+};
+setPaused(false);
+function updateClockUI() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  dtEl.textContent =
+    `${d.getFullYear()}. ${pad(d.getMonth() + 1)}. ${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+setInterval(updateClockUI, 1000);
+updateClockUI();
 
-  /* ---------------- 스케일 HUD — 4뎁스 이름 ---------------- */
-  const scaleNameEl = document.getElementById('scale-name');
-  let lastScaleName = '';
-  function updateScaleHUD() {
-    const { sys, d } = nearestSystem();
-    const { word, d: dw } = nearestWord();
-    let name;
-    if (sys && d < 260) name = `${sys.char}계`;
-    else if (word && dw < 18000) name = `${word.word} 성단`;
-    else name = '우리 은하';
-    if (name !== lastScaleName) {
-      lastScaleName = name;
-      scaleNameEl.textContent = name;
-    }
-
-    // 00계 화면단(d < 700)이면서 행성 확대 오버레이(letter-overlay)가 안 열렸을 때만 방위 표시기(컴퍼스) 노출
-    const compassHudEl = document.getElementById('compass-hud');
-    const isSystemView = (sys && d < 260) && letterOverlayEl.classList.contains('hidden');
-    if (isSystemView) {
-      compassHudEl.classList.remove('hidden');
-    } else {
-      compassHudEl.classList.add('hidden');
-    }
+/* ---------------- 스케일 HUD — 4뎁스 이름 ---------------- */
+const scaleNameEl = document.getElementById('scale-name');
+let lastScaleName = '';
+function updateScaleHUD() {
+  const { sys, d } = nearestSystem();
+  const { word, d: dw } = nearestWord();
+  let name;
+  if (sys && d < 260) name = `${sys.char}계`;
+  else if (word && dw < 18000) name = `${word.word} 성단`;
+  else name = '우리 은하';
+  if (name !== lastScaleName) {
+    lastScaleName = name;
+    scaleNameEl.textContent = name;
   }
 
-  /* ═════════════════════════════════════════════════════════════
-     [뎁스 4] 03 letter system — 행성 클릭 시 음절 3D 모델
-  ═════════════════════════════════════════════════════════════ */
-  const letterOverlayEl = document.getElementById('letter-overlay');
-
-  /* --- 레터 씬 (지연 초기화) --- */
-  let Lscene = null, Lcamera = null, Lrenderer = null, Lcomposer = null, Lcontrols = null;
-  let Lrim = null;   /* 행성 껍질에 오행 색을 얹는 림 라이트 */
-  let Lcapsule = null;
-
-  function letterInit() {
-    const wrap = document.getElementById('letter-stage');
-    Lscene = new THREE.Scene();
-    Lscene.background = new THREE.Color(0x0b0805);
-    Lscene.fog = new THREE.FogExp2(0x0b0805, .004);
-
-    Lcamera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, .1, 400);
-    Lcamera.position.set(0, .4, 14);
-
-    Lrenderer = new THREE.WebGLRenderer({ antialias: true });
-    Lrenderer.setSize(innerWidth, innerHeight);
-    Lrenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    Lrenderer.toneMapping = THREE.ACESFilmicToneMapping;
-    Lrenderer.toneMappingExposure = 1.28;
-    wrap.appendChild(Lrenderer.domElement);
-
-    const pmrem = new THREE.PMREMGenerator(Lrenderer);
-    Lscene.environment = pmrem.fromScene(new RoomEnvironment(), .06).texture;
-
-    const key = new THREE.DirectionalLight(0xfff1dc, 2.6);
-    key.position.set(7, 11, 9); Lscene.add(key);
-    Lrim = new THREE.DirectionalLight(0x5a72ff, 1.1);
-    Lrim.position.set(-9, -3, -7); Lscene.add(Lrim);
-    Lscene.add(new THREE.AmbientLight(0x1c2038, .7));
-
-    Lcomposer = new EffectComposer(Lrenderer);
-    Lcomposer.addPass(new RenderPass(Lscene, Lcamera));
-    Lcomposer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .26, .7, .88));
-    Lcomposer.addPass(new OutputPass());
-
-    Lcontrols = new OrbitControls(Lcamera, Lrenderer.domElement);
-    Lcontrols.enableDamping = true; Lcontrols.dampingFactor = .06;
-    Lcontrols.autoRotate = false;
-    Lcontrols.minDistance = 6; Lcontrols.maxDistance = 90;
-    Lcontrols.target.set(0, -.5, 0);
-
-    /* letter_v1 배경 별 */
-    const NST = 1500, pos = [], col = [];
-    for (let i = 0; i < NST; i++) {
-      const r = 70 + Math.random() * 180,
-        th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
-      pos.push(r * Math.sin(ph) * Math.cos(th), r * Math.sin(ph) * Math.sin(th) * .62, r * Math.cos(ph));
-      const t = Math.random(), b = .45 + Math.random() * .55;
-      if (t < .78) col.push(b, b * .96, b * .86);
-      else if (t < .92) col.push(.5 * b, .62 * b, b);
-      else col.push(b, .6 * b, .45 * b);
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    Lscene.add(new THREE.Points(g, new THREE.PointsMaterial({
-      size: .55, vertexColors: true, transparent: true, opacity: .85,
-      blending: THREE.AdditiveBlending, depthWrite: false
-    })));
-
+  // 00계 화면단(d < 700)이면서 행성 확대 오버레이(letter-overlay)가 안 열렸을 때만 방위 표시기(컴퍼스) 노출
+  const compassHudEl = document.getElementById('compass-hud');
+  const isSystemView = (sys && d < 260) && letterOverlayEl.classList.contains('hidden');
+  if (isSystemView) {
+    compassHudEl.classList.remove('hidden');
+  } else {
+    compassHudEl.classList.add('hidden');
   }
+}
 
-  /* ── 한지 풀이 — 가로 판형 카드 데이터 ───────────────────────
-     왼쪽 열은 큰 항목, 오른쪽 열은 짧은 항목, 性格은 여러 줄 풀이 */
-  const RULE_KO = { '象形 基本字': '기본자', '加畫字': '가획자', '各自竝書': '병서자', '異體字': '이체자' };
-  const VIRTUE_KO = ['어질 인', '예절 례', '믿을 신', '의로울 의', '슬기 지'];
-  const FAMILY = [['ㄱ', 'ㅋ', 'ㄲ'], ['ㄴ', 'ㄷ', 'ㅌ', 'ㄹ', 'ㄸ'], ['ㅁ', 'ㅂ', 'ㅍ', 'ㅃ'], ['ㅅ', 'ㅈ', 'ㅊ', 'ㅆ', 'ㅉ'], ['ㅇ', 'ㅎ']];
-  const ENERGY_KO = [
-    ['봄날의 나무처럼 곧게 뻗어 자라는 기운이니', '성장의 에너지를 갖는다'],
-    ['여름 불꽃처럼 위로 타오르는 기운이니', '피어나는 에너지를 갖는다'],
-    ['한가운데서 두루 품어 안는 기운이니', '아우르는 에너지를 갖는다'],
-    ['가을 쇠붙이처럼 거두어 굳히는 기운이니', '여무는 에너지를 갖는다'],
-    ['겨울 물처럼 낮은 곳으로 스며드는 기운이니', '고요히 모이는 에너지를 갖는다'],
-  ];
+/* ═════════════════════════════════════════════════════════════
+   [뎁스 4] 03 letter system — 행성 클릭 시 음절 3D 모델
+═════════════════════════════════════════════════════════════ */
+const letterOverlayEl = document.getElementById('letter-overlay');
 
-  function consData(jm) {
-    const E = EL[jm.el], jj = jejaText(jm.glyph);
-    return {
-      family: FAMILY[jm.el],
-      left: [
-        ['五音', `${jj.soundKo} ${RULE_KO[jj.rule] || jj.rule}`],
-        ['季節', E.seasonKo],
-        ['方位', `${E.dirKo}쪽`],
-        ['方位神', E.godKo],
-      ],
-      right: [
-        ['五行', `${E.name} ${E.ko}`],
-        ['五方色', OHBANG_KO[jm.el]],
-        ['德性', VIRTUE_KO[jm.el]],
-      ],
-      persona: [`${E.shapeKo}에서 형태를 얻었다`, ...ENERGY_KO[jm.el]],
-      quote: E.shape,
-    };
+/* --- 레터 씬 (지연 초기화) --- */
+let Lscene = null, Lcamera = null, Lrenderer = null, Lcomposer = null, Lcontrols = null;
+let Lrim = null;   /* 행성 껍질에 오행 색을 얹는 림 라이트 */
+let Lcapsule = null;
+
+function letterInit() {
+  const wrap = document.getElementById('letter-stage');
+  Lscene = new THREE.Scene();
+  Lscene.background = new THREE.Color(0x0b0805);
+  Lscene.fog = new THREE.FogExp2(0x0b0805, .004);
+
+  Lcamera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, .1, 400);
+  Lcamera.position.set(0, .4, 14);
+
+  Lrenderer = new THREE.WebGLRenderer({ antialias: true });
+  Lrenderer.setSize(innerWidth, innerHeight);
+  Lrenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  Lrenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  Lrenderer.toneMappingExposure = 1.28;
+  wrap.appendChild(Lrenderer.domElement);
+
+  const pmrem = new THREE.PMREMGenerator(Lrenderer);
+  Lscene.environment = pmrem.fromScene(new RoomEnvironment(), .06).texture;
+
+  const key = new THREE.DirectionalLight(0xfff1dc, 2.6);
+  key.position.set(7, 11, 9); Lscene.add(key);
+  Lrim = new THREE.DirectionalLight(0x5a72ff, 1.1);
+  Lrim.position.set(-9, -3, -7); Lscene.add(Lrim);
+  Lscene.add(new THREE.AmbientLight(0x1c2038, .7));
+
+  Lcomposer = new EffectComposer(Lrenderer);
+  Lcomposer.addPass(new RenderPass(Lscene, Lcamera));
+  Lcomposer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .26, .7, .88));
+  Lcomposer.addPass(new OutputPass());
+
+  Lcontrols = new OrbitControls(Lcamera, Lrenderer.domElement);
+  Lcontrols.enableDamping = true; Lcontrols.dampingFactor = .06;
+  Lcontrols.autoRotate = false;
+  Lcontrols.minDistance = 6; Lcontrols.maxDistance = 90;
+  Lcontrols.target.set(0, -.5, 0);
+
+  /* letter_v1 배경 별 */
+  const NST = 1500, pos = [], col = [];
+  for (let i = 0; i < NST; i++) {
+    const r = 70 + Math.random() * 180,
+      th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+    pos.push(r * Math.sin(ph) * Math.cos(th), r * Math.sin(ph) * Math.sin(th) * .62, r * Math.cos(ph));
+    const t = Math.random(), b = .45 + Math.random() * .55;
+    if (t < .78) col.push(b, b * .96, b * .86);
+    else if (t < .92) col.push(.5 * b, .62 * b, b);
+    else col.push(b, .6 * b, .45 * b);
   }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  Lscene.add(new THREE.Points(g, new THREE.PointsMaterial({
+    size: .55, vertexColors: true, transparent: true, opacity: .85,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  })));
 
-  /* 陽 ㅏㅑㅗㅛ… · 陰 ㅓㅕㅜㅠ… · 그 밖의 ㅡㅣ는 어느 쪽도 아닌 中 */
-  function yinyang(v) {
-    return YANG.has(v) ? ['陽', '밝고 발산하는 소리']
-      : YIN.has(v) ? ['陰', '깊고 수렴하는 소리']
-        : ['中', '음도 양도 아닌 소리'];
-  }
+}
 
-  function vowelData(jm) {
-    const tail = YANG.has(jm.glyph) ? '확산하는 양의 에너지를 갖는다'
-      : YIN.has(jm.glyph) ? '수렴하는 음의 에너지를 갖는다'
-        : '어느 쪽에도 치우치지 않는 中의 에너지를 갖는다';
-    return {
-      family: jm.seq.map(x => ['ㆍ', 'ㅡ', 'ㅣ'][x]),
-      left: [
-        ['三才', jm.seq.map(x => SAMH[x]).join(', ')],
-        ['陰陽', yinyang(jm.glyph)[1]],
-      ],
-      right: [
-        ['天', `위성 ${jm.moons}`],
-        ['地', `가로띠 ${jm.beltH}`],
-        ['人', `세로띠 ${jm.beltV}`],
-      ],
-      persona: [
-        '중성은 음양과 삼재를 따른다',
-        '둥근 ㆍ는 하늘, 평평한 ㅡ는 땅, 곧게 선 ㅣ는 사람으로',
-        '셋이 어우러진 형상을 이루며',
-        tail,
-      ],
-      quote: '取象於天地人',
-    };
-  }
+/* ── 한지 풀이 — 가로 판형 카드 데이터 ───────────────────────
+   왼쪽 열은 큰 항목, 오른쪽 열은 짧은 항목, 性格은 여러 줄 풀이 */
+const RULE_KO = { '象形 基本字': '기본자', '加畫字': '가획자', '各自竝書': '병서자', '異體字': '이체자' };
+const VIRTUE_KO = ['어질 인', '예절 례', '믿을 신', '의로울 의', '슬기 지'];
+const FAMILY = [['ㄱ', 'ㅋ', 'ㄲ'], ['ㄴ', 'ㄷ', 'ㅌ', 'ㄹ', 'ㄸ'], ['ㅁ', 'ㅂ', 'ㅍ', 'ㅃ'], ['ㅅ', 'ㅈ', 'ㅊ', 'ㅆ', 'ㅉ'], ['ㅇ', 'ㅎ']];
+const ENERGY_KO = [
+  ['봄날의 나무처럼 곧게 뻗어 자라는 기운이니', '성장의 에너지를 갖는다'],
+  ['여름 불꽃처럼 위로 타오르는 기운이니', '피어나는 에너지를 갖는다'],
+  ['한가운데서 두루 품어 안는 기운이니', '아우르는 에너지를 갖는다'],
+  ['가을 쇠붙이처럼 거두어 굳히는 기운이니', '여무는 에너지를 갖는다'],
+  ['겨울 물처럼 낮은 곳으로 스며드는 기운이니', '고요히 모이는 에너지를 갖는다'],
+];
 
-  /* 궤도 도형 — 종이 위에 먹선으로 다시 그린 자소 궤도.
-     자음은 제 수식 곡선(병서는 살짝 돌려 한 벌 더), 모음은 원 + 띠 + 위성 */
-  function drawOrbitThumb(jm) {
-    const cv = document.getElementById('letter-orbit');
-    const ctx = cv.getContext('2d');
-    const W = cv.width, H = cv.height;
-    ctx.clearRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(43, 30, 18, 0.8)';
-    ctx.fillStyle = 'rgba(43, 30, 18, 0.8)';
-    ctx.lineWidth = 2;
-    const cx = W / 2, cy = H / 2;
-    const trace = (P) => {
-      ctx.beginPath();
-      P.forEach(([x, y], i) => (i ? ctx.lineTo(cx + x, cy + y) : ctx.moveTo(cx + x, cy + y)));
-      ctx.stroke();
-    };
-    if (jm.type === 'vowel') {
-      const R = H * 0.3;
-      ctx.beginPath();
-      ctx.arc(cx, cy, R, 0, Math.PI * 2);
-      ctx.stroke();
-      const sgn = jm.yang === false ? -1 : 1;
-      for (let k = 0; k < (jm.beltH | 0); k++) {
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, R * (1.7 + k * 0.35), R * 0.55, -0.42, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      for (let k = 0; k < (jm.beltV | 0); k++) {
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, R * 0.55, R * (1.7 + k * 0.35), sgn * 0.42, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      for (let m = 0; m < (jm.moons | 0); m++) {
-        const a = -0.7 - m * 2.4;
-        ctx.beginPath();
-        ctx.arc(cx + Math.cos(a) * R * 1.55, cy + Math.sin(a) * R * 1.55, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    } else {
-      const P = jamoCurve(jm.glyph, Math.min(W, H) * 0.42);
-      trace(P);
-      if (jm.tense) {
-        ctx.globalAlpha = 0.7;
-        trace(rotate2(P, 0.35));
-        ctx.globalAlpha = 1;
-      }
-    }
-  }
-
-  /* jm = 자소 궤도 정보, sys = 그 자소가 속한 음절 계 */
-  function openLetter(jm, sys) {
-    if (!Lscene) letterInit();
-
-    /* 반사광(림 라이트)은 그 자소의 오행 색으로 */
-    if (Lrim) Lrim.color.copy(C3(planetSpec(jm).accent));
-
-    /* 행성 캡슐 — 해설지를 찾아낸 곳이 그 자소의 행성 속이라는 배경 */
-    if (Lcapsule) {
-      Lscene.remove(Lcapsule);
-      Lcapsule.traverse(o => { if (o.geometry) o.geometry.dispose(); });
-    }
-    /* 행성 본체가 사라졌으니 캡슐도 고리만 — 발치에 낮게 깔리는 오방색 가락지 */
-    Lcapsule = new THREE.Group();
-    if (jm.type === 'vowel') makeBelt(Lcapsule, 9, 1.4, 2.4, -Math.PI / 2, 0, '#e8dcc2');
-    else makeBelt(Lcapsule, 9, 1.4, 2.4, -Math.PI / 2, 0, jm.col);
-    Lcapsule.userData.dir = jm.dir;
-    Lcapsule.position.y = -8;
-    Lscene.add(Lcapsule);
-
-    Lcamera.position.set(0, .4, 14);
-    Lcontrols.target.set(0, -.5, 0);
-
-    const isV = jm.type === 'vowel';
-    const D = isV ? vowelData(jm) : consData(jm);
-
-    document.getElementById('letter-char').textContent = jm.glyph;
-    document.getElementById('letter-family').innerHTML =
-      D.family.map(g => (g === jm.glyph ? `<b>${g}</b>` : g)).join(' ');
-    drawOrbitThumb(jm);
-
-    const rowsHtml = (rows) => rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-    document.getElementById('letter-table').innerHTML =
-      rowsHtml(D.left) + `<dt>性格</dt><dd>${D.persona.join('<br>')}</dd>`;
-    document.getElementById('letter-table2').innerHTML = rowsHtml(D.right);
-    document.getElementById('letter-quote').textContent = D.quote;
-
-    letterOverlayEl.classList.remove('hidden');
-    document.body.classList.add('reading');
-  }
-
-
-  function closeLetter() {
-    letterOverlayEl.classList.add('hidden');
-    document.body.classList.remove('reading');
-    const { sys } = nearestSystem();
-    if (sys) flyTo(() => sys.pos.clone(), 90, 1.8);
-  }
-  document.getElementById('letter-close').addEventListener('click', closeLetter);
-
-  /* ═════════════════════════════════════════════════════════════
-     이름풀이 — 첫 어절의 음양·오행을 세어 우주 위에 세로로 편다
-  ═════════════════════════════════════════════════════════════ */
-  const readingOverlayEl = document.getElementById('reading-overlay');
-  const btnReading = document.getElementById('btn-reading');
-
-  /* 이름 = 가장 가까운 성단(이름) */
-  const readingName = () => {
-    const { word } = nearestWord();
-    return word ? word.word : (words.length ? words[0].word : '');
+function consData(jm) {
+  const E = EL[jm.el], jj = jejaText(jm.glyph);
+  return {
+    family: FAMILY[jm.el],
+    left: [
+      ['五音', `${jj.soundKo} ${RULE_KO[jj.rule] || jj.rule}`],
+      ['季節', E.seasonKo],
+      ['方位', `${E.dirKo}쪽`],
+      ['方位神', E.godKo],
+    ],
+    right: [
+      ['五行', `${E.name} ${E.ko}`],
+      ['五方色', OHBANG_KO[jm.el]],
+      ['德性', VIRTUE_KO[jm.el]],
+    ],
+    persona: [`${E.shapeKo}에서 형태를 얻었다`, ...ENERGY_KO[jm.el]],
+    quote: E.shape,
   };
+}
 
-  function syncReadingButton() {
-    const n = readingName();
-    btnReading.querySelector('.br-name').textContent = n;
-    btnReading.classList.toggle('on', !!n);
-  }
+/* 陽 ㅏㅑㅗㅛ… · 陰 ㅓㅕㅜㅠ… · 그 밖의 ㅡㅣ는 어느 쪽도 아닌 中 */
+function yinyang(v) {
+  return YANG.has(v) ? ['陽', '밝고 발산하는 소리']
+    : YIN.has(v) ? ['陰', '깊고 수렴하는 소리']
+      : ['中', '음도 양도 아닌 소리'];
+}
 
-  function openReading() {
-    const R = nameReading(readingName());
-    if (!R) return;
+function vowelData(jm) {
+  const tail = YANG.has(jm.glyph) ? '확산하는 양의 에너지를 갖는다'
+    : YIN.has(jm.glyph) ? '수렴하는 음의 에너지를 갖는다'
+      : '어느 쪽에도 치우치지 않는 中의 에너지를 갖는다';
+  return {
+    family: jm.seq.map(x => ['ㆍ', 'ㅡ', 'ㅣ'][x]),
+    left: [
+      ['三才', jm.seq.map(x => SAMH[x]).join(', ')],
+      ['陰陽', yinyang(jm.glyph)[1]],
+    ],
+    right: [
+      ['天', `위성 ${jm.moons}`],
+      ['地', `가로띠 ${jm.beltH}`],
+      ['人', `세로띠 ${jm.beltV}`],
+    ],
+    persona: [
+      '중성은 음양과 삼재를 따른다',
+      '둥근 ㆍ는 하늘, 평평한 ㅡ는 땅, 곧게 선 ㅣ는 사람으로',
+      '셋이 어우러진 형상을 이루며',
+      tail,
+    ],
+    quote: '取象於天地人',
+  };
+}
 
-    /* 집계 — 음양은 있는 것만, 오행도 있는 것만 */
-    const counts = [];
-    if (R.yang) counts.push(`陽 ${R.yang}`);
-    if (R.yin) counts.push(`陰 ${R.yin}`);
-    if (R.mid) counts.push(`中 ${R.mid}`);
-    R.el.forEach((n, i) => { if (n) counts.push(`${EL[i].h} ${n}`); });
-    document.getElementById('reading-counts').textContent = counts.join('  ');
-
-    document.getElementById('reading-name').textContent = R.name;
-    document.getElementById('reading-traits').innerHTML =
-      R.traits.map(t => `<span>${t}</span>`).join('');
-    document.getElementById('reading-advice').innerHTML =
-      [R.lackLine, ...R.advice].join('<br>');
-
-    readingOverlayEl.classList.remove('hidden');
-    document.body.classList.add('divining');
-  }
-
-  function closeReading() {
-    readingOverlayEl.classList.add('hidden');
-    document.body.classList.remove('divining');
-  }
-
-  btnReading.addEventListener('click', openReading);
-  document.getElementById('reading-close').addEventListener('click', closeReading);
-
-  /* ═════════════════════════════════════════════════════════════
-     입력 → 성단·계 재구성
-  ═════════════════════════════════════════════════════════════ */
-  const input = document.getElementById('nameInput');
-  input.addEventListener('input', () => {
-    const norm = [...input.value].filter(c => decompose(c) || c === ' ' || c === '.').join('');
-    if (norm.trim() && norm !== curText) {
-      curText = norm;
-      buildAll(norm);
-      if (systems.length) flyToSystem(0);
+/* 궤도 도형 — 종이 위에 먹선으로 다시 그린 자소 궤도.
+   자음은 제 수식 곡선(병서는 살짝 돌려 한 벌 더), 모음은 원 + 띠 + 위성 */
+function drawOrbitThumb(jm) {
+  const cv = document.getElementById('letter-orbit');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(43, 30, 18, 0.8)';
+  ctx.fillStyle = 'rgba(43, 30, 18, 0.8)';
+  ctx.lineWidth = 2;
+  const cx = W / 2, cy = H / 2;
+  const trace = (P) => {
+    ctx.beginPath();
+    P.forEach(([x, y], i) => (i ? ctx.lineTo(cx + x, cy + y) : ctx.moveTo(cx + x, cy + y)));
+    ctx.stroke();
+  };
+  if (jm.type === 'vowel') {
+    const R = H * 0.3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.stroke();
+    const sgn = jm.yang === false ? -1 : 1;
+    for (let k = 0; k < (jm.beltH | 0); k++) {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, R * (1.7 + k * 0.35), R * 0.55, -0.42, 0, Math.PI * 2);
+      ctx.stroke();
     }
-  });
-
-  /* ═════════════════════════════════════════════════════════════
-     메인 루프
-  ═════════════════════════════════════════════════════════════ */
-  const clock = new THREE.Clock();
-  let elapsedTime = 0;
-  const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-  const TWO_PI = Math.PI * 2;
-
-  function animate() {
-    requestAnimationFrame(animate);
-    const dt = clock.getDelta();
-    elapsedTime = clock.elapsedTime;
-    uPlanetTime.value = elapsedTime;
-    const speed = paused ? 0 : 1;
-
-    const dOrigin = camera.position.length();
-    const nc = nearestCluster();
-    const dNear = nc.cluster ? nc.d : dOrigin;
-    const clusterF = 1 - smooth(dNear, 26000, 72000);
-    const galaxyF = smooth(dNear, 9000, 42000);
-    const originF = 1 - smooth(dOrigin, 26000, 72000);
-
-    starsWarm.material.uniforms.uTime.value = elapsedTime;
-    starsCool.material.uniforms.uTime.value = elapsedTime;
-    clusterCore.material.uniforms.uTime.value = elapsedTime;
-    clusterStream.material.uniforms.uTime.value = elapsedTime;
-    galaxy.material.uniforms.uTime.value = elapsedTime;
-
-    starsWarm.material.uniforms.uAlpha.value = originF;
-    starsCool.material.uniforms.uAlpha.value = originF;
-    clusterCore.material.uniforms.uAlpha.value = originF;
-    clusterStream.material.uniforms.uAlpha.value = originF;
-    galaxy.material.uniforms.uAlpha.value = galaxyF;
-
-    for (const f of jamoStars.children) {
-      f.material.uniforms.uTime.value = elapsedTime;
-      f.material.uniforms.uAlpha.value = originF;
+    for (let k = 0; k < (jm.beltV | 0); k++) {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, R * 0.55, R * (1.7 + k * 0.35), sgn * 0.42, 0, Math.PI * 2);
+      ctx.stroke();
     }
+    for (let m = 0; m < (jm.moons | 0); m++) {
+      const a = -0.7 - m * 2.4;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * R * 1.55, cy + Math.sin(a) * R * 1.55, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else {
+    const P = jamoCurve(jm.glyph, Math.min(W, H) * 0.42);
+    trace(P);
+    if (jm.tense) {
+      ctx.globalAlpha = 0.7;
+      trace(rotate2(P, 0.35));
+      ctx.globalAlpha = 1;
+    }
+  }
+}
 
-    /* ----- 성단별: 광채 구름 페이드 + 은하 뷰 표지 ----- */
-    for (const c of clusters) {
-      const dSelf = camera.position.distanceTo(c.pos);
-      c.cF = 1 - smooth(dSelf, 26000, 72000);
-      if (c.deco) {
-        for (const f of c.deco.children) {
-          f.material.uniforms.uTime.value = elapsedTime;
-          f.material.uniforms.uAlpha.value = c.cF;
+/* jm = 자소 궤도 정보, sys = 그 자소가 속한 음절 계 */
+function openLetter(jm, sys) {
+  if (!Lscene) letterInit();
+
+  /* 반사광(림 라이트)은 그 자소의 오행 색으로 */
+  if (Lrim) Lrim.color.copy(C3(planetSpec(jm).accent));
+
+  /* 행성 캡슐 — 해설지를 찾아낸 곳이 그 자소의 행성 속이라는 배경 */
+  if (Lcapsule) {
+    Lscene.remove(Lcapsule);
+    Lcapsule.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  }
+  /* 행성 본체가 사라졌으니 캡슐도 고리만 — 발치에 낮게 깔리는 오방색 가락지 */
+  Lcapsule = new THREE.Group();
+  if (jm.type === 'vowel') makeBelt(Lcapsule, 9, 1.4, 2.4, -Math.PI / 2, 0, '#e8dcc2');
+  else makeBelt(Lcapsule, 9, 1.4, 2.4, -Math.PI / 2, 0, jm.col);
+  Lcapsule.userData.dir = jm.dir;
+  Lcapsule.position.y = -8;
+  Lscene.add(Lcapsule);
+
+  Lcamera.position.set(0, .4, 14);
+  Lcontrols.target.set(0, -.5, 0);
+
+  const isV = jm.type === 'vowel';
+  const D = isV ? vowelData(jm) : consData(jm);
+
+  document.getElementById('letter-char').textContent = jm.glyph;
+  document.getElementById('letter-family').innerHTML =
+    D.family.map(g => (g === jm.glyph ? `<b>${g}</b>` : g)).join(' ');
+  drawOrbitThumb(jm);
+
+  const rowsHtml = (rows) => rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  document.getElementById('letter-table').innerHTML =
+    rowsHtml(D.left) + `<dt>性格</dt><dd>${D.persona.join('<br>')}</dd>`;
+  document.getElementById('letter-table2').innerHTML = rowsHtml(D.right);
+  document.getElementById('letter-quote').textContent = D.quote;
+
+  letterOverlayEl.classList.remove('hidden');
+  document.body.classList.add('reading');
+}
+
+
+function closeLetter() {
+  letterOverlayEl.classList.add('hidden');
+  document.body.classList.remove('reading');
+  const { sys } = nearestSystem();
+  if (sys) flyTo(() => sys.pos.clone(), 90, 1.8);
+}
+document.getElementById('letter-close').addEventListener('click', closeLetter);
+
+/* ═════════════════════════════════════════════════════════════
+   이름풀이 — 첫 어절의 음양·오행을 세어 우주 위에 세로로 편다
+═════════════════════════════════════════════════════════════ */
+const readingOverlayEl = document.getElementById('reading-overlay');
+const btnReading = document.getElementById('btn-reading');
+
+/* 이름 = 가장 가까운 성단(이름) */
+const readingName = () => {
+  const { word } = nearestWord();
+  return word ? word.word : (words.length ? words[0].word : '');
+};
+
+function syncReadingButton() {
+  const n = readingName();
+  btnReading.querySelector('.br-name').textContent = n;
+  btnReading.classList.toggle('on', !!n);
+}
+
+function openReading() {
+  const R = nameReading(readingName());
+  if (!R) return;
+
+  /* 집계 — 음양은 있는 것만, 오행도 있는 것만 */
+  const counts = [];
+  if (R.yang) counts.push(`陽 ${R.yang}`);
+  if (R.yin) counts.push(`陰 ${R.yin}`);
+  if (R.mid) counts.push(`中 ${R.mid}`);
+  R.el.forEach((n, i) => { if (n) counts.push(`${EL[i].h} ${n}`); });
+  document.getElementById('reading-counts').textContent = counts.join('  ');
+
+  document.getElementById('reading-name').textContent = R.name;
+  document.getElementById('reading-traits').innerHTML =
+    R.traits.map(t => `<span>${t}</span>`).join('');
+  document.getElementById('reading-advice').innerHTML =
+    [R.lackLine, ...R.advice].join('<br>');
+
+  readingOverlayEl.classList.remove('hidden');
+  document.body.classList.add('divining');
+}
+
+function closeReading() {
+  readingOverlayEl.classList.add('hidden');
+  document.body.classList.remove('divining');
+}
+
+btnReading.addEventListener('click', openReading);
+document.getElementById('reading-close').addEventListener('click', closeReading);
+
+/* ═════════════════════════════════════════════════════════════
+   입력 → 성단·계 재구성
+═════════════════════════════════════════════════════════════ */
+const input = document.getElementById('nameInput');
+input.addEventListener('input', () => {
+  const norm = [...input.value].filter(c => decompose(c) || c === ' ' || c === '.').join('');
+  if (norm.trim() && norm !== curText) {
+    curText = norm;
+    buildAll(norm);
+    if (systems.length) flyToSystem(0);
+  }
+});
+
+/* ═════════════════════════════════════════════════════════════
+   메인 루프
+═════════════════════════════════════════════════════════════ */
+const clock = new THREE.Clock();
+let elapsedTime = 0;
+const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const TWO_PI = Math.PI * 2;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  elapsedTime = clock.elapsedTime;
+  uPlanetTime.value = elapsedTime;
+  const speed = paused ? 0 : 1;
+
+  const dOrigin = camera.position.length();
+  const nc = nearestCluster();
+  const dNear = nc.cluster ? nc.d : dOrigin;
+  const clusterF = 1 - smooth(dNear, 26000, 72000);
+  const galaxyF = smooth(dNear, 9000, 42000);
+  const originF = 1 - smooth(dOrigin, 26000, 72000);
+
+  starsWarm.material.uniforms.uTime.value = elapsedTime;
+  starsCool.material.uniforms.uTime.value = elapsedTime;
+  clusterCore.material.uniforms.uTime.value = elapsedTime;
+  clusterStream.material.uniforms.uTime.value = elapsedTime;
+  galaxy.material.uniforms.uTime.value = elapsedTime;
+
+  starsWarm.material.uniforms.uAlpha.value = originF;
+  starsCool.material.uniforms.uAlpha.value = originF;
+  clusterCore.material.uniforms.uAlpha.value = originF;
+  clusterStream.material.uniforms.uAlpha.value = originF;
+  galaxy.material.uniforms.uAlpha.value = galaxyF;
+
+  for (const f of jamoStars.children) {
+    f.material.uniforms.uTime.value = elapsedTime;
+    f.material.uniforms.uAlpha.value = originF;
+  }
+
+  /* ----- 성단별: 광채 구름 페이드 + 은하 뷰 표지 ----- */
+  for (const c of clusters) {
+    const dSelf = camera.position.distanceTo(c.pos);
+    c.cF = 1 - smooth(dSelf, 26000, 72000);
+    if (c.deco) {
+      for (const f of c.deco.children) {
+        f.material.uniforms.uTime.value = elapsedTime;
+        f.material.uniforms.uAlpha.value = c.cF;
+      }
+    }
+    c.beacon.material.opacity = 0.9 * galaxyF;
+    c.beacon.visible = galaxyF > 0.02;
+    c.beaconLabel.element.style.opacity = galaxyF;
+    c.beaconLabel.element.style.pointerEvents = galaxyF < 0.05 ? 'none' : 'auto';
+  }
+
+  updateScaleHUD();
+
+  /* ----- 계별 업데이트: 음절별 v8 체인 공전 + 페이드 ----- */
+  for (const s of systems) {
+    const dS = camera.position.distanceTo(s.pos);
+    const sysF = 1 - smooth(dS, 350, 1300);
+    s.sysF = sysF;
+    const visible = sysF > 0.02;
+    const SC = s.SCALE;
+
+    for (const y of s.jamos) {
+      /* 작도 진행: reveal 6초 → 이후 연속 공전 (u = 궤도 위 위상 0~1) */
+      y.age += dt * speed;
+      const reveal = Math.min(1, Math.max(0, y.age / REVEAL_DUR));
+      let u;
+      if (reveal < 1) {
+        u = reveal;
+        y.tc = 0;
+        y.traj.geometry.setDrawRange(0, Math.max(2, Math.floor(reveal * NPT)));
+      } else {
+        y.tc += dt * y.w * speed;
+        u = y.tc % 1;
+        y.traj.geometry.setDrawRange(0, NPT + 1);
+      }
+
+      if (visible) {
+        const idx = Math.min(NPT, Math.floor(u * NPT));
+        const [px, py] = y.pts[idx];
+        y.planet.position.set(px * SC, 0, py * SC);
+        /* 병서 — 두 바퀴가 한 벌이다. 홀수 바퀴는 5° 틀어진 겹궤도 쪽으로 갈아탄다
+           (궤도면을 통째로 돌린 것과 같은 회전을 좌표에 걸어 자리만 옮긴다) */
+        if (y.twinQ && Math.floor(y.tc) % 2 === 1) y.planet.position.applyQuaternion(y.twinQ);
+        /* 자전 — 제 공전과 같은 손으로 돈다. 위에서 볼 때 rotation.y 증가는
+           반시계이므로, 시계(dir=+1)로 돌리려면 빼 준다 */
+        y.planet.rotation.y -= dt * speed * 0.25 * y.dir;
+        if (y.moonGrp) y.moonGrp.rotation.y -= dt * speed * 0.9 * y.dir;
+
+        /* ----- 궤적 글로우 꼬리 (행성 뒤로 한 바퀴에 걸쳐 소멸) ----- */
+        const ca = y.traj.geometry.attributes.color.array;
+        const head = reveal < 1 ? Math.max(1, Math.floor(reveal * NPT) - 1) : idx;
+        for (let k = 0; k <= NPT; k++) {
+          let d = head - k;
+          if (reveal >= 1 && d < 0) d += NPT;
+          if (d < 0) { ca[k * 3] = ca[k * 3 + 1] = ca[k * 3 + 2] = 0; continue; }
+          const b = Math.pow(Math.max(0, 1 - d / NPT), 1.35) * sysF;
+          ca[k * 3] = y.trailC.r * b;
+          ca[k * 3 + 1] = y.trailC.g * b;
+          ca[k * 3 + 2] = y.trailC.b * b;
         }
-      }
-      c.beacon.material.opacity = 0.9 * galaxyF;
-      c.beacon.visible = galaxyF > 0.02;
-      c.beaconLabel.element.style.opacity = galaxyF;
-      c.beaconLabel.element.style.pointerEvents = galaxyF < 0.05 ? 'none' : 'auto';
-    }
+        y.traj.geometry.attributes.color.needsUpdate = true;
 
-    updateScaleHUD();
-
-    /* ----- 계별 업데이트: 음절별 v8 체인 공전 + 페이드 ----- */
-    for (const s of systems) {
-      const dS = camera.position.distanceTo(s.pos);
-      const sysF = 1 - smooth(dS, 350, 1300);
-      s.sysF = sysF;
-      const visible = sysF > 0.02;
-      const SC = s.SCALE;
-
-      for (const y of s.jamos) {
-        /* 작도 진행: reveal 6초 → 이후 연속 공전 (u = 궤도 위 위상 0~1) */
-        y.age += dt * speed;
-        const reveal = Math.min(1, Math.max(0, y.age / REVEAL_DUR));
-        let u;
-        if (reveal < 1) {
-          u = reveal;
-          y.tc = 0;
-          y.traj.geometry.setDrawRange(0, Math.max(2, Math.floor(reveal * NPT)));
-        } else {
-          y.tc += dt * y.w * speed;
-          u = y.tc % 1;
-          y.traj.geometry.setDrawRange(0, NPT + 1);
+        /* ----- 반짝이는 부스러기 ----- */
+        const du = y.dust;
+        const dp = y.debris.geometry.attributes.position.array;
+        const dc = y.debris.geometry.attributes.color.array;
+        du.acc += dt * 26;
+        while (du.acc >= 1) {
+          du.acc -= 1;
+          const i = du.idx = (du.idx + 1) % 90;
+          /* 띠 바깥 고리 안에서 인다 — 가운데 자소가 가려지지 않게 */
+          const sa = Math.random() * TWO_PI;
+          const sr = y.auraR * (1.05 + Math.random() * 0.35);
+          dp[i * 3] = y.planet.position.x + Math.cos(sa) * sr;
+          dp[i * 3 + 1] = (Math.random() - 0.5) * y.auraR * 0.45;
+          dp[i * 3 + 2] = y.planet.position.z + Math.sin(sa) * sr;
+          du.vel[i * 3] = Math.cos(sa) * 0.3 + (Math.random() - 0.5) * 0.9;
+          du.vel[i * 3 + 1] = (Math.random() - 0.5) * 0.7;
+          du.vel[i * 3 + 2] = Math.sin(sa) * 0.3 + (Math.random() - 0.5) * 0.9;
+          du.age[i] = 0;
+          du.life[i] = 1.1 + Math.random() * 1.5;
+          du.ph[i] = Math.random() * TWO_PI;
         }
-
-        if (visible) {
-          const idx = Math.min(NPT, Math.floor(u * NPT));
-          const [px, py] = y.pts[idx];
-          y.planet.position.set(px * SC, 0, py * SC);
-          /* 병서 — 두 바퀴가 한 벌이다. 홀수 바퀴는 5° 틀어진 겹궤도 쪽으로 갈아탄다
-             (궤도면을 통째로 돌린 것과 같은 회전을 좌표에 걸어 자리만 옮긴다) */
-          if (y.twinQ && Math.floor(y.tc) % 2 === 1) y.planet.position.applyQuaternion(y.twinQ);
-          /* 자전 — 제 공전과 같은 손으로 돈다. 위에서 볼 때 rotation.y 증가는
-             반시계이므로, 시계(dir=+1)로 돌리려면 빼 준다 */
-          y.planet.rotation.y -= dt * speed * 0.25 * y.dir;
-          if (y.moonGrp) y.moonGrp.rotation.y -= dt * speed * 0.9 * y.dir;
-
-          /* ----- 궤적 글로우 꼬리 (행성 뒤로 한 바퀴에 걸쳐 소멸) ----- */
-          const ca = y.traj.geometry.attributes.color.array;
-          const head = reveal < 1 ? Math.max(1, Math.floor(reveal * NPT) - 1) : idx;
-          for (let k = 0; k <= NPT; k++) {
-            let d = head - k;
-            if (reveal >= 1 && d < 0) d += NPT;
-            if (d < 0) { ca[k * 3] = ca[k * 3 + 1] = ca[k * 3 + 2] = 0; continue; }
-            const b = Math.pow(Math.max(0, 1 - d / NPT), 1.35) * sysF;
-            ca[k * 3] = y.trailC.r * b;
-            ca[k * 3 + 1] = y.trailC.g * b;
-            ca[k * 3 + 2] = y.trailC.b * b;
-          }
-          y.traj.geometry.attributes.color.needsUpdate = true;
-
-          /* ----- 반짝이는 부스러기 ----- */
-          const du = y.dust;
-          const dp = y.debris.geometry.attributes.position.array;
-          const dc = y.debris.geometry.attributes.color.array;
-          du.acc += dt * 26;
-          while (du.acc >= 1) {
-            du.acc -= 1;
-            const i = du.idx = (du.idx + 1) % 90;
-            /* 띠 바깥 고리 안에서 인다 — 가운데 자소가 가려지지 않게 */
-            const sa = Math.random() * TWO_PI;
-            const sr = y.auraR * (1.05 + Math.random() * 0.35);
-            dp[i * 3] = y.planet.position.x + Math.cos(sa) * sr;
-            dp[i * 3 + 1] = (Math.random() - 0.5) * y.auraR * 0.45;
-            dp[i * 3 + 2] = y.planet.position.z + Math.sin(sa) * sr;
-            du.vel[i * 3] = Math.cos(sa) * 0.3 + (Math.random() - 0.5) * 0.9;
-            du.vel[i * 3 + 1] = (Math.random() - 0.5) * 0.7;
-            du.vel[i * 3 + 2] = Math.sin(sa) * 0.3 + (Math.random() - 0.5) * 0.9;
-            du.age[i] = 0;
-            du.life[i] = 1.1 + Math.random() * 1.5;
-            du.ph[i] = Math.random() * TWO_PI;
-          }
-          for (let i = 0; i < 90; i++) {
-            du.age[i] += dt;
-            const a = du.age[i], Lf = du.life[i];
-            if (a >= Lf) { dc[i * 3] = dc[i * 3 + 1] = dc[i * 3 + 2] = 0; continue; }
-            dp[i * 3] += du.vel[i * 3] * dt;
-            dp[i * 3 + 1] += du.vel[i * 3 + 1] * dt;
-            dp[i * 3 + 2] += du.vel[i * 3 + 2] * dt;
-            const fade = Math.pow(1 - a / Lf, 1.7);
-            const tw = 0.55 + 0.45 * Math.sin(elapsedTime * 11 + du.ph[i]);
-            const b = fade * tw * sysF;
-            dc[i * 3] = y.elC.r * b; dc[i * 3 + 1] = y.elC.g * b; dc[i * 3 + 2] = y.elC.b * b;
-          }
-          y.debris.geometry.attributes.position.needsUpdate = true;
-          y.debris.geometry.attributes.color.needsUpdate = true;
-
-          /* ----- 큰 반짝이 ----- */
-          const db = y.dustBig;
-          const bp = y.debrisBig.geometry.attributes.position.array;
-          const bc = y.debrisBig.geometry.attributes.color.array;
-          db.acc += dt * 3;
-          while (db.acc >= 1) {
-            db.acc -= 1;
-            const i = db.idx = (db.idx + 1) % 14;
-            const ba = Math.random() * TWO_PI;
-            const br = y.auraR * (1.1 + Math.random() * 0.45);
-            bp[i * 3] = y.planet.position.x + Math.cos(ba) * br;
-            bp[i * 3 + 1] = (Math.random() - 0.5) * y.auraR * 0.6;
-            bp[i * 3 + 2] = y.planet.position.z + Math.sin(ba) * br;
-            db.vel[i * 3] = Math.cos(ba) * 0.25 + (Math.random() - 0.5) * 0.6;
-            db.vel[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
-            db.vel[i * 3 + 2] = Math.sin(ba) * 0.25 + (Math.random() - 0.5) * 0.6;
-            db.age[i] = 0;
-            db.life[i] = 1.6 + Math.random() * 1.4;
-            db.ph[i] = Math.random() * TWO_PI;
-          }
-          for (let i = 0; i < 14; i++) {
-            db.age[i] += dt;
-            const ab = db.age[i], Lb = db.life[i];
-            if (ab >= Lb) { bc[i * 3] = bc[i * 3 + 1] = bc[i * 3 + 2] = 0; continue; }
-            bp[i * 3] += db.vel[i * 3] * dt;
-            bp[i * 3 + 1] += db.vel[i * 3 + 1] * dt;
-            bp[i * 3 + 2] += db.vel[i * 3 + 2] * dt;
-            const fadeB = Math.pow(1 - ab / Lb, 1.5);
-            const twB = 0.5 + 0.5 * Math.sin(elapsedTime * 7 + db.ph[i]);
-            const bB = fadeB * twB * sysF;
-            bc[i * 3] = y.elC.r * bB; bc[i * 3 + 1] = y.elC.g * bB; bc[i * 3 + 2] = y.elC.b * bB;
-          }
-          y.debrisBig.geometry.attributes.position.needsUpdate = true;
-          y.debrisBig.geometry.attributes.color.needsUpdate = true;
+        for (let i = 0; i < 90; i++) {
+          du.age[i] += dt;
+          const a = du.age[i], Lf = du.life[i];
+          if (a >= Lf) { dc[i * 3] = dc[i * 3 + 1] = dc[i * 3 + 2] = 0; continue; }
+          dp[i * 3] += du.vel[i * 3] * dt;
+          dp[i * 3 + 1] += du.vel[i * 3 + 1] * dt;
+          dp[i * 3 + 2] += du.vel[i * 3 + 2] * dt;
+          const fade = Math.pow(1 - a / Lf, 1.7);
+          const tw = 0.55 + 0.45 * Math.sin(elapsedTime * 11 + du.ph[i]);
+          const b = fade * tw * sysF;
+          dc[i * 3] = y.elC.r * b; dc[i * 3 + 1] = y.elC.g * b; dc[i * 3 + 2] = y.elC.b * b;
         }
+        y.debris.geometry.attributes.position.needsUpdate = true;
+        y.debris.geometry.attributes.color.needsUpdate = true;
 
-        /* 페이드 (계 단위) */
-        y.trajMat.opacity = 0.9 * sysF;
-        const orbitVisible = visible && showOrbit;
-        y.planet.visible = visible;
-        y.traj.visible = orbitVisible;
-        for (const g of y.glows) g.visible = orbitVisible;
-        if (y.twinLines) for (const l of y.twinLines) l.visible = orbitVisible;
-        y.debris.visible = visible;
-        y.debrisBig.visible = visible;
-        const op = showName ? sysF : 0;
-        y.planetLabel.element.style.opacity = op;
-        y.planetLabel.element.style.pointerEvents = op < 0.05 ? 'none' : 'auto';
+        /* ----- 큰 반짝이 ----- */
+        const db = y.dustBig;
+        const bp = y.debrisBig.geometry.attributes.position.array;
+        const bc = y.debrisBig.geometry.attributes.color.array;
+        db.acc += dt * 3;
+        while (db.acc >= 1) {
+          db.acc -= 1;
+          const i = db.idx = (db.idx + 1) % 14;
+          const ba = Math.random() * TWO_PI;
+          const br = y.auraR * (1.1 + Math.random() * 0.45);
+          bp[i * 3] = y.planet.position.x + Math.cos(ba) * br;
+          bp[i * 3 + 1] = (Math.random() - 0.5) * y.auraR * 0.6;
+          bp[i * 3 + 2] = y.planet.position.z + Math.sin(ba) * br;
+          db.vel[i * 3] = Math.cos(ba) * 0.25 + (Math.random() - 0.5) * 0.6;
+          db.vel[i * 3 + 1] = (Math.random() - 0.5) * 0.5;
+          db.vel[i * 3 + 2] = Math.sin(ba) * 0.25 + (Math.random() - 0.5) * 0.6;
+          db.age[i] = 0;
+          db.life[i] = 1.6 + Math.random() * 1.4;
+          db.ph[i] = Math.random() * TWO_PI;
+        }
+        for (let i = 0; i < 14; i++) {
+          db.age[i] += dt;
+          const ab = db.age[i], Lb = db.life[i];
+          if (ab >= Lb) { bc[i * 3] = bc[i * 3 + 1] = bc[i * 3 + 2] = 0; continue; }
+          bp[i * 3] += db.vel[i * 3] * dt;
+          bp[i * 3 + 1] += db.vel[i * 3 + 1] * dt;
+          bp[i * 3 + 2] += db.vel[i * 3 + 2] * dt;
+          const fadeB = Math.pow(1 - ab / Lb, 1.5);
+          const twB = 0.5 + 0.5 * Math.sin(elapsedTime * 7 + db.ph[i]);
+          const bB = fadeB * twB * sysF;
+          bc[i * 3] = y.elC.r * bB; bc[i * 3 + 1] = y.elC.g * bB; bc[i * 3 + 2] = y.elC.b * bB;
+        }
+        y.debrisBig.geometry.attributes.position.needsUpdate = true;
+        y.debrisBig.geometry.attributes.color.needsUpdate = true;
       }
 
-      s.compass.mat.opacity = showOrbit ? 0.07 * sysF : 0;
-
-      /* 성단 뷰 계 마커 — 계에 가까우면 숨기고 성단 거리에서 등장 */
-      const mF = smooth(dS, 500, 2400) * (clusters[s.clusterIndex] ? clusters[s.clusterIndex].cF : 0);
-      s.marker.visible = mF > 0.02;
-      if (s.marker.visible) {
-        s.marker.scale.setScalar(mF);
-        s.marker.rotation.y += dt * 0.05;
-      }
-
-      const sOp = (showName && showSun) ? clusterF : 0;
-      s.sunLabel.element.style.opacity = sOp;
-      s.sunLabel.element.style.pointerEvents = sOp < 0.05 ? 'none' : 'auto';
-
-      const offOp = (showName && !showSun) ? clusterF * 0.5 : 0;
-      if (s.sunOffLabel) {
-        s.sunOffLabel.element.style.opacity = offOp;
-        s.sunOffLabel.element.style.pointerEvents = offOp < 0.05 ? 'none' : 'auto';
-      }
+      /* 페이드 (계 단위) */
+      y.trajMat.opacity = 0.9 * sysF;
+      const orbitVisible = visible && showOrbit;
+      y.planet.visible = visible;
+      y.traj.visible = orbitVisible;
+      for (const g of y.glows) g.visible = orbitVisible;
+      if (y.twinLines) for (const l of y.twinLines) l.visible = orbitVisible;
+      y.debris.visible = visible;
+      y.debrisBig.visible = visible;
+      const op = showName ? sysF : 0;
+      y.planetLabel.element.style.opacity = op;
+      y.planetLabel.element.style.pointerEvents = op < 0.05 ? 'none' : 'auto';
     }
 
-    /* ----- 카메라 트윈 ----- */
-    if (camTween) {
-      camTween.t += dt / camTween.dur;
-      const k = easeInOut(Math.min(camTween.t, 1));
-      camera.position.lerpVectors(camTween.fromPos, camTween.toPosFn(), k);
-      controls.target.lerpVectors(camTween.fromTarget, camTween.toTargetFn(), k);
-      if (camTween.t >= 1) {
-        const done = camTween.onDone;
-        camTween = null;
-        if (done) done();
-      }
+    s.compass.mat.opacity = showOrbit ? 0.07 * sysF : 0;
+
+    /* 성단 뷰 계 마커 — 계에 가까우면 숨기고 성단 거리에서 등장 */
+    const mF = smooth(dS, 500, 2400) * (clusters[s.clusterIndex] ? clusters[s.clusterIndex].cF : 0);
+    s.marker.visible = mF > 0.02;
+    if (s.marker.visible) {
+      s.marker.scale.setScalar(mF);
+      s.marker.rotation.y += dt * 0.05;
     }
 
+    const sOp = (showName && showSun) ? clusterF : 0;
+    s.sunLabel.element.style.opacity = sOp;
+    s.sunLabel.element.style.pointerEvents = sOp < 0.05 ? 'none' : 'auto';
 
-    controls.update();
-    renderer.render(scene, camera);
-    labelRenderer.render(scene, camera);
-    updateCompassHUD();
-
-    /* ----- 레터 오버레이 ----- */
-    if (Lscene && !letterOverlayEl.classList.contains('hidden')) {
-      if (Lcapsule) Lcapsule.rotation.y = -elapsedTime * 0.04 * (Lcapsule.userData.dir || 1);
-      Lcontrols.update();
-      Lcomposer.render();
+    const offOp = (showName && !showSun) ? clusterF * 0.5 : 0;
+    if (s.sunOffLabel) {
+      s.sunOffLabel.element.style.opacity = offOp;
+      s.sunOffLabel.element.style.pointerEvents = offOp < 0.05 ? 'none' : 'auto';
     }
   }
 
-  addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-    labelRenderer.setSize(innerWidth, innerHeight);
-    if (Lrenderer) {
-      Lcamera.aspect = innerWidth / innerHeight;
-      Lcamera.updateProjectionMatrix();
-      Lrenderer.setSize(innerWidth, innerHeight);
-      Lcomposer.setSize(innerWidth, innerHeight);
+  /* ----- 카메라 트윈 ----- */
+  if (camTween) {
+    camTween.t += dt / camTween.dur;
+    const k = easeInOut(Math.min(camTween.t, 1));
+    camera.position.lerpVectors(camTween.fromPos, camTween.toPosFn(), k);
+    controls.target.lerpVectors(camTween.fromTarget, camTween.toTargetFn(), k);
+    if (camTween.t >= 1) {
+      const done = camTween.onDone;
+      camTween = null;
+      if (done) done();
     }
-  });
+  }
 
-  /* ---------------- 시작 ---------------- */
-  curText = '김수환무';
-  buildAll(curText);
-  animate()
+
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  updateCompassHUD();
+
+  /* ----- 레터 오버레이 ----- */
+  if (Lscene && !letterOverlayEl.classList.contains('hidden')) {
+    if (Lcapsule) Lcapsule.rotation.y = -elapsedTime * 0.04 * (Lcapsule.userData.dir || 1);
+    Lcontrols.update();
+    Lcomposer.render();
+  }
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+  if (Lrenderer) {
+    Lcamera.aspect = innerWidth / innerHeight;
+    Lcamera.updateProjectionMatrix();
+    Lrenderer.setSize(innerWidth, innerHeight);
+    Lcomposer.setSize(innerWidth, innerHeight);
+  }
+});
+
+/* ---------------- 시작 ---------------- */
+curText = '김수환무';
+buildAll(curText);
+animate()
