@@ -62,15 +62,51 @@
     <span class="br-label">이름풀이 〉</span>
   </button>
 
-  <!-- 이름풀이 — 우주 위에 뜨는 세로쓰기 판 -->
+  <!-- 이름풀이 — 흑칠 자개(나전) 명함 -->
   <div id="reading-overlay" class="hidden">
     <button id="reading-close" aria-label="close">✕</button>
     <div id="reading-paper">
-      <div class="rp-flow">
-        <div class="rp-counts" id="reading-counts"></div>
-        <h2 class="rp-name" id="reading-name"></h2>
-        <div class="rp-traits" id="reading-traits"></div>
-        <p class="rp-advice" id="reading-advice"></p>
+      <div class="rp-card">
+        <!-- 자개 빛 그라디언트 정의 + 회(回)문 모서리 장식 -->
+        <svg class="rp-corner tl" viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <linearGradient id="pearlStroke" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f2e9f5" />
+              <stop offset=".25" stop-color="#ffd9e8" />
+              <stop offset=".5" stop-color="#cfe3ff" />
+              <stop offset=".75" stop-color="#d2f5e8" />
+              <stop offset="1" stop-color="#fff3d6" />
+            </linearGradient>
+          </defs>
+          <path d="M2 62 V14 Q2 2 14 2 H62 M12 62 V22 Q12 12 22 12 H62
+                   M22 52 V30 Q22 22 30 22 H52 M30 44 V34 Q30 30 34 30 H44"
+            fill="none" stroke="url(#pearlStroke)" stroke-width="1.6" opacity=".85" />
+        </svg>
+        <svg class="rp-corner tr" viewBox="0 0 64 64" aria-hidden="true"><path d="M2 62 V14 Q2 2 14 2 H62 M12 62 V22 Q12 12 22 12 H62 M22 52 V30 Q22 22 30 22 H52 M30 44 V34 Q30 30 34 30 H44" fill="none" stroke="url(#pearlStroke)" stroke-width="1.6" opacity=".85" /></svg>
+        <svg class="rp-corner bl" viewBox="0 0 64 64" aria-hidden="true"><path d="M2 62 V14 Q2 2 14 2 H62 M12 62 V22 Q12 12 22 12 H62 M22 52 V30 Q22 22 30 22 H52 M30 44 V34 Q30 30 34 30 H44" fill="none" stroke="url(#pearlStroke)" stroke-width="1.6" opacity=".85" /></svg>
+        <svg class="rp-corner br" viewBox="0 0 64 64" aria-hidden="true"><path d="M2 62 V14 Q2 2 14 2 H62 M12 62 V22 Q12 12 22 12 H62 M22 52 V30 Q22 22 30 22 H52 M30 44 V34 Q30 30 34 30 H44" fill="none" stroke="url(#pearlStroke)" stroke-width="1.6" opacity=".85" /></svg>
+
+        <div class="rp-flow">
+          <p class="rp-counts" id="reading-counts"></p>
+          <h2 class="rp-name" id="reading-name"></h2>
+          <p class="rp-traits" id="reading-traits"></p>
+          <div class="rp-rule"><span>用神</span></div>
+          <p class="rp-lack" id="reading-lack"></p>
+          <dl class="rp-rx">
+            <div class="rx-row">
+              <dt>方位</dt>
+              <dd id="reading-rx-dir"></dd>
+            </div>
+            <div class="rx-row">
+              <dt>服色</dt>
+              <dd id="reading-rx-wear"></dd>
+            </div>
+            <div class="rx-row">
+              <dt>貴人</dt>
+              <dd id="reading-rx-surname"></dd>
+            </div>
+          </dl>
+        </div>
       </div>
     </div>
   </div>

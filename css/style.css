@@ -815,79 +815,212 @@ body.divining #btn-reading {
   background: rgba(226, 208, 168, 0.14);
 }
 
-/* 겹줄 테두리 — 판본의 광곽(匡郭) */
+/* ── 흑칠 자개(나전) 명함 ─────────────────────────────────
+   검은 옻칠 바탕 위에 진주광 라인 — 자개 빛은 파스텔 무지개
+   그라디언트가 천천히 흐르는 것으로 표현한다 */
 #reading-paper {
   position: absolute;
-  inset: 5.2vh 4.4vw;
-  border: 2px solid rgba(240, 236, 226, 0.9);
-  padding: 30px 34px;
-  overflow: hidden;
-}
-
-#reading-paper::after {
-  content: "";
-  position: absolute;
-  inset: 9px;
-  border: 1px solid rgba(240, 236, 226, 0.72);
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
 }
 
-/* 세로쓰기 — 오른쪽에서 왼쪽으로. flex-direction:column 이 곧 우→좌 배열 */
+:root {
+  --pearl: linear-gradient(115deg,
+      #f2e9f5 0%, #ffd9e8 18%, #cfe3ff 38%, #d2f5e8 56%,
+      #fff3d6 74%, #e8d9ff 90%, #f2e9f5 100%);
+}
+
+/* 명함 판 — 겹줄 진주 테두리(그라디언트 보더) */
+.rp-card {
+  position: relative;
+  width: min(88vw, 680px);
+  padding: clamp(26px, 5vmin, 48px) clamp(28px, 6vmin, 62px);
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(30, 24, 20, 0.55), rgba(6, 4, 3, 0.92)),
+    #0a0705;
+  border: 1.5px solid transparent;
+  background-clip: padding-box, padding-box;
+  box-shadow:
+    0 0 0 1.5px rgba(232, 224, 240, 0.55),
+    inset 0 0 0 1px rgba(232, 224, 240, 0.16),
+    0 22px 70px rgba(0, 0, 0, 0.75);
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+/* 안쪽 가는 줄 — 광곽의 안 획 */
+.rp-card::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border: 1px solid rgba(232, 224, 240, 0.28);
+  pointer-events: none;
+}
+
+/* 자개 결 — 판 전체에 어른거리는 무지개 박막 */
+.rp-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--pearl);
+  background-size: 300% 300%;
+  mix-blend-mode: overlay;
+  opacity: 0.10;
+  pointer-events: none;
+  animation: pearl-sheen 11s ease-in-out infinite;
+}
+
+@keyframes pearl-sheen {
+
+  0%,
+  100% {
+    background-position: 0% 30%;
+  }
+
+  50% {
+    background-position: 100% 70%;
+  }
+}
+
+/* 회(回)문 모서리 장식 */
+.rp-corner {
+  position: absolute;
+  width: clamp(34px, 6vmin, 56px);
+  height: clamp(34px, 6vmin, 56px);
+  opacity: 0.9;
+}
+
+.rp-corner.tl {
+  top: 14px;
+  left: 14px;
+}
+
+.rp-corner.tr {
+  top: 14px;
+  right: 14px;
+  transform: scaleX(-1);
+}
+
+.rp-corner.bl {
+  bottom: 14px;
+  left: 14px;
+  transform: scaleY(-1);
+}
+
+.rp-corner.br {
+  bottom: 14px;
+  right: 14px;
+  transform: scale(-1);
+}
+
+/* 가로쓰기 흐름 */
 .rp-flow {
-  writing-mode: vertical-rl;
-  text-orientation: upright;
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: clamp(16px, 2.6vmin, 30px);
-  width: 100%;
-  height: 100%;
-  color: #f2efe7;
+  align-items: center;
+  text-align: center;
+  gap: clamp(8px, 1.6vmin, 14px);
+  color: #ece7f0;
   user-select: none;
 }
 
 .rp-counts {
-  font-size: clamp(12px, 1.9vmin, 16px);
-  letter-spacing: 0.36em;
-  color: rgba(242, 239, 231, 0.72);
-  padding-top: 6px;
+  font-size: clamp(11px, 1.6vmin, 14px);
+  letter-spacing: 0.34em;
+  color: rgba(232, 224, 240, 0.6);
 }
 
+/* 이름 — 자개 박막이 흐르는 진주광 글자 */
 .rp-name {
-  font-size: clamp(40px, 11vmin, 92px);
+  font-size: clamp(38px, 8.5vmin, 72px);
   font-weight: 300;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  text-shadow: 0 0 26px rgba(255, 246, 220, 0.28);
+  letter-spacing: 0.14em;
+  line-height: 1.15;
+  background: var(--pearl);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 18px rgba(226, 216, 245, 0.35));
+  animation: pearl-sheen 9s ease-in-out infinite;
 }
 
-/* 성정 — 한 구절이 한 행. 행마다 계선을 세운다 */
 .rp-traits {
+  font-size: clamp(15px, 2.5vmin, 21px);
+  line-height: 1.7;
+  letter-spacing: 0.1em;
+  color: rgba(240, 236, 245, 0.92);
+}
+
+/* 용신 구획 — 가는 줄 가운데 전서 낙관풍 표제 */
+.rp-rule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin: clamp(8px, 1.8vmin, 16px) 0 2px;
+  color: rgba(232, 224, 240, 0.66);
+  font-size: clamp(11px, 1.7vmin, 14px);
+  letter-spacing: 0.42em;
+}
+
+.rp-rule::before,
+.rp-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(232, 224, 240, 0.5), transparent);
+}
+
+.rp-rule span {
+  padding-left: 0.42em;
+  /* letter-spacing 잔여분 상쇄 */
+}
+
+.rp-lack {
+  font-size: clamp(13px, 2.1vmin, 17px);
+  letter-spacing: 0.12em;
+  color: rgba(240, 236, 245, 0.8);
+}
+
+/* 처방 세 줄 — 명함 뒷면의 항목표처럼 */
+.rp-rx {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  gap: clamp(5px, 1vmin, 9px);
+  margin-top: 2px;
 }
 
-.rp-traits span {
-  padding: 4px clamp(10px, 1.8vmin, 22px) 0 0;
-  margin-right: clamp(10px, 1.8vmin, 22px);
-  border-right: 1px solid rgba(240, 236, 226, 0.55);
-  font-size: clamp(17px, 3.6vmin, 32px);
-  line-height: 1.5;
+.rx-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 16px;
+}
+
+.rx-row dt {
+  font-size: clamp(12px, 1.8vmin, 15px);
+  letter-spacing: 0.3em;
+  background: var(--pearl);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: pearl-sheen 9s ease-in-out infinite;
+}
+
+.rx-row dd {
+  font-size: clamp(14px, 2.3vmin, 19px);
   letter-spacing: 0.08em;
+  color: rgba(240, 236, 245, 0.9);
 }
 
-/* 처방 — 계선 없이 흐른다 */
-.rp-advice {
-  font-size: clamp(14px, 2.9vmin, 25px);
-  line-height: 1.95;
-  letter-spacing: 0.08em;
-  color: rgba(242, 239, 231, 0.9);
-  padding-top: 4px;
-}
-
-/* 판이 우주에 두둥실 뜨도록 */
-body.divining #reading-paper {
+/* 명함이 우주에 두둥실 뜨도록 */
+body.divining .rp-card {
   animation:
     unearth 0.9s cubic-bezier(.18, .82, .24, 1) both,
     paper-drift 15s ease-in-out 0.9s infinite;
@@ -901,8 +1034,8 @@ body.divining #reading-paper {
     padding: 12px 15px;
   }
 
-  #reading-paper {
-    inset: 3vh 3vw;
-    padding: 18px 20px;
+  .rp-card {
+    width: 92vw;
+    padding: 22px 20px;
   }
 }

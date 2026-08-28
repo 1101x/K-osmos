@@ -1867,10 +1867,14 @@ function openReading() {
   document.getElementById('reading-counts').textContent = counts.join('  ');
 
   document.getElementById('reading-name').textContent = R.name;
-  document.getElementById('reading-traits').innerHTML =
-    R.traits.map(t => `<span>${t}</span>`).join('');
-  document.getElementById('reading-advice').innerHTML =
-    [R.lackLine, ...R.advice].join('<br>');
+  document.getElementById('reading-traits').textContent = R.traits.join(' ');
+  document.getElementById('reading-lack').textContent = R.lackLine;
+  document.getElementById('reading-rx-dir').textContent =
+    `${R.rx.dir}${R.rx.dir === '한가운데' ? '가' : '이'} 길하다`;
+  document.getElementById('reading-rx-wear').textContent =
+    `${R.rx.wear} 옷과 장신구가 이롭다`;
+  document.getElementById('reading-rx-surname').textContent =
+    `${R.rx.surname}씨 성이 귀인이다`;
 
   readingOverlayEl.classList.remove('hidden');
   document.body.classList.add('divining');

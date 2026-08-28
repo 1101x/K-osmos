@@ -256,5 +256,12 @@ export function nameReading(name) {
       `${WEAR_KO[lack]} 옷이 이롭고`,
       `${surnamesOf(lack)[0]}씨 성이 귀인이다`,
     ],
+    /* 명함형 풀이 화면용 — 항목별 낱개 값 */
+    rx: {
+      hanja: E.h, elKo: E.name,
+      dir: E.dirKo === '가운데' ? '한가운데' : `${E.dirKo}쪽`, dirH: E.dir,
+      wear: WEAR_KO[lack], ohbang: OHBANG_KO[lack],
+      surname: surnamesOf(lack)[0],
+    },
   };
 }
