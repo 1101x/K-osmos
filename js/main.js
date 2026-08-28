@@ -384,6 +384,134 @@ scene.add(galaxy);
 
 const GALAXY_CENTER_DIR = galaxy.position.clone().normalize();
 
+/* ---------------- 사신수 별자리 — 은하 사방(東西南北) ----------------
+   src/sinsoo 라인아트(투명 배경 위 흰 선)를 런타임에 캔버스로 샘플링해
+   ① 선을 따라 잔별을 촘촘히 심어 실루엣을 만들고
+   ② 최원점 샘플링으로 뽑은 관절별 몇 개를 크게 빛내고
+   ③ 관절별들을 최소신장트리 선으로 이어 별자리 선을 그린다.
+   배치는 은하 기울기와 무관한 월드 X/Z 사방 — 나침반 HUD와 같은 축.
+   카메라가 그 방위를 향하면(수평 내적) 별과 선이 밝아진다 */
+const SINSOO_DIST = 16000, SINSOO_SIZE = 19000;
+const SINSOO_SPEC = [
+  { file: 'north.png', axis: new THREE.Vector3(0, 0, -1) },   /* 北 현무 */
+  { file: 'south.png', axis: new THREE.Vector3(0, 0, 1) },    /* 南 주작 */
+  { file: 'east.png', axis: new THREE.Vector3(1, 0, 0) },     /* 東 청룡 */
+  { file: 'west.png', axis: new THREE.Vector3(-1, 0, 0) },    /* 西 백호 */
+];
+const sinsoos = [];
+
+/* 알파 채널이 살아 있는 픽셀 = 라인 위의 점 */
+function sinsooSample(img, n) {
+  const cv = document.createElement('canvas');
+  const w = cv.width = img.width, h = cv.height = img.height;
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+  const a = ctx.getImageData(0, 0, w, h).data;
+  const px = [];
+  for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2)
+    if (a[(y * w + x) * 4 + 3] > 140) px.push([x, y]);
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(px[Math.floor(Math.random() * px.length)]);
+  return { pts: out, w, h };
+}
+/* 최원점 샘플링 — 서로 가장 멀리 떨어진 k점이라 꼬리·발톱·머리 끝이 관절이 된다 */
+function sinsooJoints(pts, k) {
+  const J = [pts[0]];
+  while (J.length < k) {
+    let best = pts[0], bd = -1;
+    for (const p of pts) {
+      let d = Infinity;
+      for (const j of J) d = Math.min(d, (p[0] - j[0]) ** 2 + (p[1] - j[1]) ** 2);
+      if (d > bd) { bd = d; best = p; }
+    }
+    J.push(best);
+  }
+  return J;
+}
+/* 관절을 잇는 최소신장트리 — 끊긴 데 없는 한 붓 별자리 선 */
+function sinsooEdges(J) {
+  const inT = [0], left = J.map((_, i) => i).slice(1), edges = [];
+  while (left.length) {
+    let be = null, bd = Infinity;
+    for (const a of inT) for (const b of left) {
+      const d = (J[a][0] - J[b][0]) ** 2 + (J[a][1] - J[b][1]) ** 2;
+      if (d < bd) { bd = d; be = [a, b]; }
+    }
+    edges.push(be);
+    inT.push(be[1]);
+    left.splice(left.indexOf(be[1]), 1);
+  }
+  return edges;
+}
+function buildSinsoo(img, spec) {
+  const { pts, w, h } = sinsooSample(img, 900);
+  const joints = sinsooJoints(pts, 14);
+  const S = SINSOO_SIZE / Math.max(w, h);
+  /* 수직 평면(로컬 XY)에 세운다 — 은하를 둘러싼 네 폭 병풍처럼.
+     카메라가 반대편으로 돌면 그 방위의 사신수가 정면으로 마주 보인다 */
+  const toXY = ([x, y]) => [(x - w / 2) * S, (h / 2 - y) * S];
+
+  const group = new THREE.Group();
+
+  /* 라인아트 원화 — 흰 선 그대로를 반투명 가산 평면으로 띄운다 */
+  const imgTex = new THREE.Texture(img);
+  imgTex.colorSpace = THREE.SRGBColorSpace;
+  imgTex.needsUpdate = true;
+  const imgMat = new THREE.MeshBasicMaterial({
+    map: imgTex, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const imgMesh = new THREE.Mesh(new THREE.PlaneGeometry(w * S, h * S), imgMat);
+  imgMesh.position.z = -30;                   /* 별·선보다 살짝 뒤 */
+  group.add(imgMesh);
+
+  /* 잔별 실루엣 + 관절별 — 기존 별 셰이더(반짝임 내장)를 그대로 쓴다 */
+  const all = pts.concat(joints);
+  let i = 0;
+  const field = makeStarField({
+    count: all.length,
+    sizeMin: 0, sizeMax: 0, palette: [0xffffff],
+    twinkleAmp: 0.55, maxPx: 10,
+    generate: () => {
+      const k = i++;
+      const [x, y] = toXY(all[k]);
+      const joint = k >= pts.length;
+      return {
+        x, y, z: gauss() * 26,
+        color: joint ? 0xfff4d8 : 0xcfd9ff,
+        size: joint ? 1400 + Math.random() * 700 : 260 + Math.pow(Math.random(), 1.6) * 560,
+      };
+    },
+  });
+  group.add(field);
+
+  /* 별자리 선 */
+  const verts = [];
+  for (const [a, b] of sinsooEdges(joints)) {
+    const [ax, ay] = toXY(joints[a]), [bx, by] = toXY(joints[b]);
+    verts.push(ax, ay, 0, bx, by, 0);
+  }
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0xcfe0ff, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  group.add(new THREE.LineSegments(lineGeo, lineMat));
+
+  group.position.copy(spec.axis).multiplyScalar(SINSOO_DIST);
+  group.lookAt(0, 0, 0);                      /* 그림 정면이 은하 중심을 향한다 */
+  group.visible = showStars;
+  scene.add(group);
+  sinsoos.push({ group, axis: spec.axis, field, lineMat, imgMat, phase: Math.random() * Math.PI * 2 });
+}
+SINSOO_SPEC.forEach(spec => {
+  const img = new Image();
+  img.onload = () => buildSinsoo(img, spec);
+  img.src = './src/sinsoo/' + spec.file;
+});
+const CAM_FWD = new THREE.Vector3();
+
 /* ---------------- [뎁스 2] 성단 + 별 배경 (01 그대로) ---------------- */
 const starsWarm = makeStarField({
   count: 9000,
@@ -1145,6 +1273,7 @@ function toggleStarsVisibility() {
   if (clusterCore) clusterCore.visible = showStars;
   if (clusterStream) clusterStream.visible = showStars;
   if (jamoStars) jamoStars.visible = showStars;
+  for (const s of sinsoos) s.group.visible = showStars;
 
   if (universe) {
     universe.traverse(child => {
@@ -1392,6 +1521,17 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     while (o && o.userData.sysIndex === undefined) o = o.parent;
     if (o) selectPlanet(o.userData.sysIndex, o.userData.jamoIndex);
   }
+});
+
+/* 행성 호버 → 커서 손가락으로 변경 */
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (letterOverlayEl && !letterOverlayEl.classList.contains('hidden')) return;
+  const { d } = nearestSystem();
+  if (d > 700) { renderer.domElement.style.cursor = 'default'; return; }
+  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(systems.flatMap(s => s.jamos.map(y => y.planet)), true);
+  renderer.domElement.style.cursor = hits.length ? 'pointer' : 'default';
 });
 
 /* ---------------- 시간/재생 UI ---------------- */
@@ -1814,6 +1954,19 @@ function animate() {
   clusterStream.material.uniforms.uAlpha.value = originF;
   galaxy.material.uniforms.uAlpha.value = galaxyF;
 
+  /* ----- 사신수 별자리: 기본 은은히 보이고, 그 방위를 향하면 100%로 짙어진다 ----- */
+  camera.getWorldDirection(CAM_FWD);
+  const fwLen = Math.hypot(CAM_FWD.x, CAM_FWD.z) || 1;
+  for (const s of sinsoos) {
+    const facing = (CAM_FWD.x * s.axis.x + CAM_FWD.z * s.axis.z) / fwLen;
+    const focus = smooth(facing, 0.15, 0.85);
+    const flicker = 0.86 + 0.14 * Math.sin(elapsedTime * 1.6 + s.phase);
+    s.field.material.uniforms.uTime.value = elapsedTime;
+    s.field.material.uniforms.uAlpha.value = galaxyF * (0.45 + 0.55 * focus);
+    s.imgMat.opacity = galaxyF * (0.22 + 0.78 * focus) * flicker;
+    s.lineMat.opacity = galaxyF * (0.15 + 0.85 * focus) * flicker;
+  }
+
   for (const f of jamoStars.children) {
     f.material.uniforms.uTime.value = elapsedTime;
     f.material.uniforms.uAlpha.value = originF;
@@ -1967,9 +2120,9 @@ function animate() {
       if (y.twinLines) for (const l of y.twinLines) l.visible = orbitVisible;
       y.debris.visible = visible;
       y.debrisBig.visible = visible;
-      const op = showName ? sysF : 0;
-      y.planetLabel.element.style.opacity = op;
-      y.planetLabel.element.style.pointerEvents = op < 0.05 ? 'none' : 'auto';
+      /* 행성 이름 태그 비활성화 — 항성(sunLabel)에서만 이름 표시 */
+      y.planetLabel.element.style.opacity = 0;
+      y.planetLabel.element.style.pointerEvents = 'none';
     }
 
     s.compass.mat.opacity = showOrbit ? 0.07 * sysF : 0;
