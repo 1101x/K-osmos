@@ -150,8 +150,8 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050302);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 300000);
-/* 빈 입력으로 시작하므로 첫 화면은 은하 뎁스 — 거리는 goGalaxy()와 같다 */
-camera.position.set(0, 46, 78).setLength(62000);
+/* 첫 화면 자리는 은하가 만들어진 뒤 맨 아래 '시작'에서 잡는다 */
+camera.position.set(0, 46, 78);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -1799,7 +1799,8 @@ function animate() {
   const dNear = nc.cluster ? nc.d : dOrigin;
   const clusterF = 1 - smooth(dNear, 26000, 72000);
   const galaxyF = smooth(dNear, 9000, 42000);
-  const originF = 1 - smooth(dOrigin, 26000, 72000);
+  /* 원점 구상 성단 = 첫 이름이 앉는 자리. 심은 이름이 없으면 우주에 띄우지 않는다 */
+  const originF = clusters.length ? 1 - smooth(dOrigin, 26000, 72000) : 0;
 
   starsWarm.material.uniforms.uTime.value = elapsedTime;
   starsCool.material.uniforms.uTime.value = elapsedTime;
@@ -2033,6 +2034,20 @@ addEventListener('resize', () => {
 });
 
 /* ---------------- 시작 ---------------- */
+/* 빈 입력으로 여니 첫 화면은 은하 뎁스 — 은하를 화면 한가운데 두고
+   원반 법선에서 GAZE_TILT 만큼 비껴 내려다봐 사선 타원으로 보이게 한다.
+   거리는 galaxyF가 다 차오르는 42000 밖으로 잡아 은하가 흐려지지 않는다 */
+const GAZE_TILT = 0.55, GAZE_DIST = 30000;
+{
+  const c = galaxy.position;
+  const n = new THREE.Vector3(0, 1, 0).applyEuler(GALAXY_TILT).normalize();  /* 원반 법선 */
+  const axis = new THREE.Vector3(0, 1, 0).cross(n).normalize();              /* 법선에 수직 */
+  const dir = n.clone().applyAxisAngle(axis, GAZE_TILT);
+  camera.position.copy(c).addScaledVector(dir, GAZE_DIST);
+  controls.target.copy(c);
+  controls.update();
+}
+
 draft.text = normName(input.value);
 rebuildUniverse(false);
 animate()
