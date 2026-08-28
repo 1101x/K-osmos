@@ -959,9 +959,14 @@ function buildCluster(b, wi) {
   const cpos = b.ref.pos;
   const cGroup = new THREE.Group();
   universe.add(cGroup);
+  /* 눌러 본 자소는 이름에 적어 둔다 — 다시 지어도 남고, 이름이 바뀌면 처음부터.
+     계를 다 돌아야 이름풀이가 열린다 */
+  if (b.ref.visitedFor !== b.name) { b.ref.visited = new Set(); b.ref.visitedFor = b.name; }
   const wordEntry = {
     index: wi, clusterIndex: wi, wordIndex: wi, pos: cpos, firstWord: b.name, word: b.name,
     group: cGroup, sysStart: systems.length,
+    visited: b.ref.visited,
+    total: b.sylls.reduce((n, sd) => n + sd.orbits.length, 0),
     deco: null, beacon: null, beaconLabel: null, cF: 1, systems: [],
   };
 
@@ -1218,7 +1223,7 @@ function buildCluster(b, wi) {
     cGroup.add(group);
     wordEntry.systems.push(sysIndex);
     systems.push({
-      index: sysIndex, wordIndex: wi, clusterIndex: wi,
+      index: sysIndex, wordIndex: wi, clusterIndex: wi, sylIndex: si,
       char: sd.char, word: b.name, el: sd.el,
       onset: sd.onset, vowel: sd.vowel, coda: sd.coda,
       pos, group, star, sunLabel, sunOffLabel, compass, marker, jamos, SCALE, sysF: 1,
@@ -1403,6 +1408,9 @@ function selectPlanet(si, ji) {
   if (!s) return;
   const jm = s.jamos[ji];
   if (!jm) return;
+  /* 눌러 본 자소 하나 — 성단의 자소를 다 채우면 이름풀이가 열린다 */
+  const c = clusters[s.clusterIndex];
+  if (c) { c.visited.add(`${s.sylIndex}:${ji}`); syncReadingButton(); }
   document.querySelectorAll('.planet-label').forEach(el => el.classList.remove('selected'));
   jm.planetLabel.element.classList.add('selected');
   const dist = jm.sz * (jm.type === 'vowel' ? 8 : 6);
@@ -1602,7 +1610,7 @@ function updateClockUI() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   dtEl.textContent =
-    `${d.getFullYear()}. ${pad(d.getMonth() + 1)}. ${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    `${d.getFullYear()}年 ${pad(d.getMonth() + 1)}月 ${pad(d.getDate())}日  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 setInterval(updateClockUI, 1000);
 updateClockUI();
@@ -1870,22 +1878,37 @@ document.getElementById('letter-close').addEventListener('click', closeLetter);
 ═════════════════════════════════════════════════════════════ */
 const readingOverlayEl = document.getElementById('reading-overlay');
 const btnReading = document.getElementById('btn-reading');
+const READING_RATIO = 0.6;   /* 자소를 이만큼 둘러보면 게이지가 꽉 찬다 */
 
-/* 이름 = 가장 가까운 성단(이름) */
-const readingName = () => {
+/* 풀이 대상 = 가장 가까운 성단(이름) */
+const readingWord = () => {
   const { word } = nearestWord();
-  return word ? word.word : (words.length ? words[0].word : '');
+  return word || (words.length ? words[0] : null);
+};
+const readingName = () => {
+  const w = readingWord();
+  return w ? w.word : '';
 };
 
 let lastReadingName = '';
 function syncReadingButton() {
-  const n = readingName();
+  const w = readingWord();
+  const n = w ? w.word : '';
   lastReadingName = n;
   btnReading.querySelector('.br-name').textContent = n;
   btnReading.classList.toggle('on', !!n);
+
+  /* 자소를 눌러 본 만큼 단추가 차오른다. 다만 전부가 아니라 여덟 할만 봐도
+     게이지가 꽉 차고 풀이가 열린다 — 마지막 한둘을 찾아 헤매지 않도록 */
+  const seen = w ? w.visited.size : 0;
+  const need = w ? Math.ceil(w.total * READING_RATIO) : 0;
+  btnReading.style.setProperty('--br-fill', need ? `${Math.min(1, seen / need) * 100}%` : '0%');
+  btnReading.classList.toggle('ready', need > 0 && seen >= need);
 }
 
 function openReading() {
+  /* 자소를 다 둘러보기 전에는 열리지 않는다 */
+  if (!btnReading.classList.contains('ready')) return;
   const R = nameReading(readingName());
   if (!R) return;
 

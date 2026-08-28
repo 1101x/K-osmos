@@ -816,11 +816,46 @@ body.divining #btn-reading {
 
 #btn-reading.on {
   display: flex;
+  overflow: hidden;
 }
 
-#btn-reading:hover {
-  background: rgba(226, 208, 168, 0.12);
+/* 자소를 눌러 본 만큼 왼쪽부터 차오르는 상태바 */
+#btn-reading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: var(--br-fill, 0%);
+  background: rgba(226, 208, 168, 0.13);
+  border-right: 1px solid rgba(226, 208, 168, 0.3);
+  transition: width 0.45s ease;
+  pointer-events: none;
+}
+
+#btn-reading>span {
+  position: relative;
+  z-index: 1;
+}
+
+/* 다 채우기 전에는 눌러도 열리지 않으니, 그렇게 보이게 둔다 */
+#btn-reading:not(.ready) {
+  cursor: default;
+}
+
+#btn-reading:not(.ready) .br-arrow {
+  opacity: 0.25;
+}
+
+#btn-reading.ready {
   border-color: rgba(226, 208, 168, 0.4);
+}
+
+#btn-reading.ready:hover {
+  background: rgba(226, 208, 168, 0.12);
+  border-color: rgba(226, 208, 168, 0.6);
+}
+
+#btn-reading.ready:hover .br-arrow {
+  transform: translateX(4px);
 }
 
 #btn-reading .br-name {
@@ -837,9 +872,6 @@ body.divining #btn-reading {
   transition: transform 0.2s;
 }
 
-#btn-reading:hover .br-arrow {
-  transform: translateX(4px);
-}
 
 #reading-overlay {
   position: fixed;
