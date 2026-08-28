@@ -1570,7 +1570,7 @@ function updateScaleHUD() {
   let name;
   if (sys && d < 260) name = `${sys.char}계`;
   else if (word && dw < 18000) name = `${word.word} 성단`;
-  else name = '우리 은하';
+  else name = '태극 은하';
   if (name !== lastScaleName) {
     lastScaleName = name;
     scaleNameEl.textContent = name;
@@ -1824,7 +1824,7 @@ document.getElementById('letter-close').addEventListener('click', closeLetter);
 ═════════════════════════════════════════════════════════════ */
 const readingOverlayEl = document.getElementById('reading-overlay');
 const btnReading = document.getElementById('btn-reading');
-const READING_RATIO = 0.6;   /* 자소를 이만큼 둘러보면 게이지가 꽉 찬다 */
+const READING_RATIO = 0.5;   /* 자소를 이만큼 둘러보면 게이지가 꽉 찬다 */
 
 /* 풀이 대상 = 가장 가까운 성단(이름) */
 const readingWord = () => {
