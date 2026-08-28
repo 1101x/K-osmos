@@ -150,7 +150,8 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050302);
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 300000);
-camera.position.set(0, 46, 78);
+/* 빈 입력으로 시작하므로 첫 화면은 은하 뎁스 — 거리는 goGalaxy()와 같다 */
+camera.position.set(0, 46, 78).setLength(62000);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
@@ -310,44 +311,59 @@ function makeStarField({ count, radiusMin, radiusMax, sizeMin, sizeMax, palette,
   return new THREE.Points(geo, mat);
 }
 
-/* ---------------- [뎁스 1] 우리은하 (01 그대로) ---------------- */
+/* ---------------- [뎁스 1] 우리은하 — 태극 두 팔 ---------------- */
 const GALAXY_TILT = new THREE.Euler(0.55, 0.35, 0.12);
-const SUN_LOCAL = new THREE.Vector3(9800, 0, 1200);
+const SUN_LOCAL = new THREE.Vector3(1600, 0, -6400);   /* 아래쪽 테를 타는 팔 중간 위 */
 
 function galaxyGenerate() {
-  const N_BULGE = 11000, N_ARM = 20000, N_HII = 900;
+  /* 태극 두 팔 — 중앙 벌지 없이 점대칭 팔 둘.
+     팔은 바깥 꼬리에서 가늘게 시작해 안으로 감길수록 두꺼워지고,
+     두꺼워진 머리는 빈 눈(R_EYE)을 한 바퀴 반 감아 돌아 속이 뚫려 보인다.
+     색은 기존 벌지/팔/성운 팔레트를 그대로 섞어 쓴다 */
+  const N_ARM = 15500, N_HII = 450;                    /* 팔마다 → 총 31900 */
+  const R_EYE = 1600;                                  /* 눈(공동) 반지름 */
+  const R_FAR = 8800;                                  /* 꼬리 시작이 눈에서 떨어진 거리 */
+  const CURL = 1.9 * Math.PI;                          /* 감기는 총 각도 */
+  const EYES = [{ cx: 2600, cz: -2600 }, { cx: -2600, cz: 2600 }];
+  const cols = [
+    0xfff4d8, 0xffe9b8, 0xffffff, 0xffddaa,            /* 구 벌지(온색) */
+    0xdfe8ff, 0xffffff, 0xcdd8ff, 0xfff2d8,            /* 구 팔(한색) */
+  ];
   const pts = [];
-  const bulgeCols = [0xfff4d8, 0xffe9b8, 0xffffff, 0xffddaa];
-  for (let i = 0; i < N_BULGE; i++) {
-    pts.push({
-      x: gauss() * 2100, y: gauss() * 800, z: gauss() * 2100,
-      color: bulgeCols[Math.floor(Math.random() * bulgeCols.length)],
-      size: 300 + Math.pow(Math.random(), 1.8) * 1100,
-    });
-  }
-  const armCols = [0xdfe8ff, 0xffffff, 0xcdd8ff, 0xfff2d8];
-  for (let i = 0; i < N_ARM; i++) {
-    const t = Math.pow(Math.random(), 0.72) * 12.6;
-    let r = 1500 * Math.exp(0.18 * t);
-    let th = t + (i % 2) * Math.PI;
-    r += gauss() * (280 + r * 0.07);
-    th += gauss() * 0.06;
-    pts.push({
-      x: Math.cos(th) * r, y: gauss() * (130 + r * 0.012), z: Math.sin(th) * r,
-      color: armCols[Math.floor(Math.random() * armCols.length)],
-      size: 260 + Math.pow(Math.random(), 2.0) * 1000,
-    });
-  }
-  for (let i = 0; i < N_HII; i++) {
-    const t = 2.5 + Math.pow(Math.random(), 0.8) * 10;
-    let r = 1500 * Math.exp(0.18 * t);
-    let th = t + (i % 2) * Math.PI + gauss() * 0.04;
-    r += gauss() * (200 + r * 0.05);
-    pts.push({
-      x: Math.cos(th) * r, y: gauss() * 150, z: Math.sin(th) * r,
-      color: 0xff9db8,
-      size: 500 + Math.random() * 900,
-    });
+  /* t 0(꼬리)→1(머리). 꼬리는 상대 눈 너머 바깥 테를 감싸고 출발해(태극 맞물림)
+     제 눈의 R_EYE 궤도로 빠르게 수렴한다 — (1-t)^3 이라 초반에 안으로 꺾여
+     바깥 테를 타고 돌다가 마지막 40%는 제 눈을 감아 돈다 */
+  const armPoint = (g, t, sigma) => {
+    const phi = Math.atan2(-g.cz, -g.cx) + t * CURL;
+    const d = R_EYE + R_FAR * Math.pow(1 - t, 3);
+    let px, pz, tries = 0;
+    do {
+      px = g.cx + Math.cos(phi) * d + gauss() * sigma;
+      pz = g.cz + Math.sin(phi) * d + gauss() * sigma;
+    } while (Math.hypot(px - g.cx, pz - g.cz) < R_EYE * 0.72 && ++tries < 4);
+    return { px, pz };
+  };
+  for (const g of EYES) {
+    for (let i = 0; i < N_ARM; i++) {
+      const t = Math.pow(Math.random(), 0.6);          /* 머리 쪽으로 밀도 편중 */
+      const sigma = 260 + 1050 * Math.pow(t, 1.4);     /* 꼬리 가늘고 머리 두껍게 */
+      const { px, pz } = armPoint(g, t, sigma);
+      pts.push({
+        x: px, y: gauss() * (180 + 320 * t), z: pz,
+        color: cols[Math.floor(Math.random() * cols.length)],
+        size: 280 + Math.pow(Math.random(), 1.9) * 1050,
+      });
+    }
+    /* 분홍 성운 — 팔을 따라 드문드문 */
+    for (let i = 0; i < N_HII; i++) {
+      const t = Math.random();
+      const { px, pz } = armPoint(g, t, 200 + 800 * t);
+      pts.push({
+        x: px, y: gauss() * 300, z: pz,
+        color: 0xff9db8,
+        size: 500 + Math.random() * 900,
+      });
+    }
   }
   let i = 0;
   return () => pts[i++];
@@ -773,274 +789,274 @@ const SCALE = MAX_ORBIT / R0;
 
 /* 이름 하나치 성단을 짓는다 — b = {ref:{text,pos}, name, sylls} */
 function buildCluster(b, wi) {
-    const cpos = b.ref.pos;
-    const cGroup = new THREE.Group();
-    universe.add(cGroup);
-    const wordEntry = {
-      index: wi, clusterIndex: wi, wordIndex: wi, pos: cpos, firstWord: b.name, word: b.name,
-      group: cGroup, sysStart: systems.length,
-      deco: null, beacon: null, beaconLabel: null, cF: 1, systems: [],
-    };
+  const cpos = b.ref.pos;
+  const cGroup = new THREE.Group();
+  universe.add(cGroup);
+  const wordEntry = {
+    index: wi, clusterIndex: wi, wordIndex: wi, pos: cpos, firstWord: b.name, word: b.name,
+    group: cGroup, sysStart: systems.length,
+    deco: null, beacon: null, beaconLabel: null, cF: 1, systems: [],
+  };
 
-    /* --- 성단 별 배경 (원점 성단은 기존 01 배경이 담당)
-       원점과 동일한 4종 구성: warm 9000 + cool 15000 + core 9000 + stream 7000 --- */
-    if (wi > 0) {
-      const deco = new THREE.Group();
-      deco.add(makeStarField({
-        count: 9000, radiusMin: 420, radiusMax: 1700, sizeMin: 8, sizeMax: 30,
-        palette: [0xffd75e, 0xffc44d, 0xffe9a8, 0xff9e5e, 0xfff4d6],
-        twinkleAmp: 0.55, atten: 0.25,
-      }));
-      deco.add(makeStarField({
-        count: 15000, radiusMin: 500, radiusMax: 1900, sizeMin: 3, sizeMax: 13,
-        palette: [0xffffff, 0xbcd2ff, 0x8fb0ff, 0xe8e8ff],
-        twinkleAmp: 0.35, atten: 0.25,
-      }));
-      deco.add(makeStarField({
-        count: 9000, sizeMin: 8, sizeMax: 32,
-        palette: [0xffd75e, 0xffc44d, 0xffe9a8, 0xfff4d6, 0xff9e5e],
-        twinkleAmp: 0.5, atten: 0.25,
-        generate: () => {
-          const r = 420 + Math.abs(gauss()) * 1150;
-          const u = Math.random() * 2 - 1;
-          const th = Math.random() * Math.PI * 2;
-          const sq = Math.sqrt(1 - u * u);
-          return { x: r * sq * Math.cos(th), y: r * u, z: r * sq * Math.sin(th) };
-        },
-      }));
-      /* 은하 중심 방향 별 흐름 (원점의 clusterStream과 동일 규칙) */
-      const ax = galaxy.position.clone().sub(cpos).normalize();
-      const u1 = new THREE.Vector3(0, 1, 0).cross(ax).normalize();
-      const v1 = ax.clone().cross(u1).normalize();
-      deco.add(makeStarField({
-        count: 7000, sizeMin: 8, sizeMax: 28,
-        palette: [0xffd75e, 0xffc44d, 0xff9e5e, 0xffe9a8],
-        twinkleAmp: 0.5, atten: 0.25,
-        generate: () => {
-          const t = -2200 + Math.pow(Math.random(), 1.25) * 11500;
-          const spread = 240 + Math.max(t, 0) * 0.085;
-          const a = gauss() * spread, b = gauss() * spread;
-          return {
-            x: ax.x * t + u1.x * a + v1.x * b,
-            y: ax.y * t + u1.y * a + v1.y * b,
-            z: ax.z * t + u1.z * a + v1.z * b,
-          };
-        },
-      }));
-      /* 자모 별밭 — 원점 성단의 jamoStars와 같은 구성 */
-      jamoFields().forEach(f => deco.add(f));
-      deco.position.copy(cpos);
-      deco.children.forEach(f => { f.visible = showStars; });
-      cGroup.add(deco);
-      wordEntry.deco = deco;
-    }
+  /* --- 성단 별 배경 (원점 성단은 기존 01 배경이 담당)
+     원점과 동일한 4종 구성: warm 9000 + cool 15000 + core 9000 + stream 7000 --- */
+  if (wi > 0) {
+    const deco = new THREE.Group();
+    deco.add(makeStarField({
+      count: 9000, radiusMin: 420, radiusMax: 1700, sizeMin: 8, sizeMax: 30,
+      palette: [0xffd75e, 0xffc44d, 0xffe9a8, 0xff9e5e, 0xfff4d6],
+      twinkleAmp: 0.55, atten: 0.25,
+    }));
+    deco.add(makeStarField({
+      count: 15000, radiusMin: 500, radiusMax: 1900, sizeMin: 3, sizeMax: 13,
+      palette: [0xffffff, 0xbcd2ff, 0x8fb0ff, 0xe8e8ff],
+      twinkleAmp: 0.35, atten: 0.25,
+    }));
+    deco.add(makeStarField({
+      count: 9000, sizeMin: 8, sizeMax: 32,
+      palette: [0xffd75e, 0xffc44d, 0xffe9a8, 0xfff4d6, 0xff9e5e],
+      twinkleAmp: 0.5, atten: 0.25,
+      generate: () => {
+        const r = 420 + Math.abs(gauss()) * 1150;
+        const u = Math.random() * 2 - 1;
+        const th = Math.random() * Math.PI * 2;
+        const sq = Math.sqrt(1 - u * u);
+        return { x: r * sq * Math.cos(th), y: r * u, z: r * sq * Math.sin(th) };
+      },
+    }));
+    /* 은하 중심 방향 별 흐름 (원점의 clusterStream과 동일 규칙) */
+    const ax = galaxy.position.clone().sub(cpos).normalize();
+    const u1 = new THREE.Vector3(0, 1, 0).cross(ax).normalize();
+    const v1 = ax.clone().cross(u1).normalize();
+    deco.add(makeStarField({
+      count: 7000, sizeMin: 8, sizeMax: 28,
+      palette: [0xffd75e, 0xffc44d, 0xff9e5e, 0xffe9a8],
+      twinkleAmp: 0.5, atten: 0.25,
+      generate: () => {
+        const t = -2200 + Math.pow(Math.random(), 1.25) * 11500;
+        const spread = 240 + Math.max(t, 0) * 0.085;
+        const a = gauss() * spread, b = gauss() * spread;
+        return {
+          x: ax.x * t + u1.x * a + v1.x * b,
+          y: ax.y * t + u1.y * a + v1.y * b,
+          z: ax.z * t + u1.z * a + v1.z * b,
+        };
+      },
+    }));
+    /* 자모 별밭 — 원점 성단의 jamoStars와 같은 구성 */
+    jamoFields().forEach(f => deco.add(f));
+    deco.position.copy(cpos);
+    deco.children.forEach(f => { f.visible = showStars; });
+    cGroup.add(deco);
+    wordEntry.deco = deco;
+  }
 
-    /* --- 은하 뷰 성단 표지 (광점 + 라벨) --- */
-    const beacon = makeGlowSprite(2400);
-    beacon.position.copy(cpos);
-    cGroup.add(beacon);
-    wordEntry.beacon = beacon;
+  /* --- 은하 뷰 성단 표지 (광점 + 라벨) --- */
+  const beacon = makeGlowSprite(2400);
+  beacon.position.copy(cpos);
+  cGroup.add(beacon);
+  wordEntry.beacon = beacon;
 
-    const beaconLabel = makeLabelEl(
-      `<span class="ring-icon" style="color:#cfd8ff"></span><span class="name">${b.name} 星團</span>`,
-      null, () => flyToWord(wi));
-    beaconLabel.element.classList.add('cluster-label');
-    beaconLabel.position.copy(cpos);
-    cGroup.add(beaconLabel);
-    wordEntry.beaconLabel = beaconLabel;
+  const beaconLabel = makeLabelEl(
+    `<span class="ring-icon" style="color:#cfd8ff"></span><span class="name">${b.name} 星團</span>`,
+    null, () => flyToWord(wi));
+  beaconLabel.element.classList.add('cluster-label');
+  beaconLabel.position.copy(cpos);
+  cGroup.add(beaconLabel);
+  wordEntry.beaconLabel = beaconLabel;
 
-    /* --- 이름 안의 음절 = 계 (성단 중심 주변에 배치 — 기존 대비 2배 거리) --- */
-    const sylPos = placeSystems(b.sylls.length, 2);
-    b.sylls.forEach((sd, si) => {
-      const sysIndex = systems.length;
-      const pos = cpos.clone().add(sylPos[si]);
-      const group = new THREE.Group();
-      group.position.copy(pos);
+  /* --- 이름 안의 음절 = 계 (성단 중심 주변에 배치 — 기존 대비 2배 거리) --- */
+  const sylPos = placeSystems(b.sylls.length, 2);
+  b.sylls.forEach((sd, si) => {
+    const sysIndex = systems.length;
+    const pos = cpos.clone().add(sylPos[si]);
+    const group = new THREE.Group();
+    group.position.copy(pos);
 
-      /* --- 항성 = 노란 발광만 (자소 그래픽 없음) --- */
-      const star = new THREE.Group();
-      star.add(makeGlowSprite(26));
-      star.visible = showSun;
-      group.add(star);
+    /* --- 항성 = 노란 발광만 (자소 그래픽 없음) --- */
+    const star = new THREE.Group();
+    star.add(makeGlowSprite(26));
+    star.visible = showSun;
+    group.add(star);
 
-      const sunLabel = makeLabelEl(
-        `<span class="ring-icon" style="color:#d8b551"></span><span class="name">${sd.char}계</span>`,
-        null, () => flyToSystem(sysIndex));
-      sunLabel.element.classList.add('sun-label');
-      group.add(sunLabel);
+    const sunLabel = makeLabelEl(
+      `<span class="ring-icon" style="color:#d8b551"></span><span class="name">${sd.char}계</span>`,
+      null, () => flyToSystem(sysIndex));
+    sunLabel.element.classList.add('sun-label');
+    group.add(sunLabel);
 
-      const sunOffLabel = makeLabelEl(
-        `<span class="sun-off-name">${sd.char}</span>`, null, () => flyToSystem(sysIndex));
-      sunOffLabel.element.classList.add('sun-off-label');
-      group.add(sunOffLabel);
+    const sunOffLabel = makeLabelEl(
+      `<span class="sun-off-name">${sd.char}</span>`, null, () => flyToSystem(sysIndex));
+    sunOffLabel.element.classList.add('sun-off-label');
+    group.add(sunOffLabel);
 
-      /* --- 오방 컴퍼스 (02 geometry_v3 UI) --- */
-      const compass = makeCompass(group);
+    /* --- 오방 컴퍼스 (02 geometry_v3 UI) --- */
+    const compass = makeCompass(group);
 
-      /* --- 성단 뷰 계 마커: 글로우 + 자소 행성 --- */
-      const marker = new THREE.Group();
-      marker.add(makeGlowSprite(560));
-      sd.orbits.forEach((o, j) => {
-        /* 성단 뷰 마커는 계 뷰 확대와 무관하게 제 크기를 지킨다 */
-        const mr = 46 * (o.sz / 3);
-        const mp = new THREE.Group();
-        mp.add(makeGlyphBillboard(o, mr));
-        if (o.type === 'vowel') makeSaturnRing(mp, mr, o);
-        else makeConsRing(mp, mr, o);
-        const a = j / sd.orbits.length * Math.PI * 2;
-        mp.position.set(Math.cos(a) * 210, 0, Math.sin(a) * 210);
-        marker.add(mp);
+    /* --- 성단 뷰 계 마커: 글로우 + 자소 행성 --- */
+    const marker = new THREE.Group();
+    marker.add(makeGlowSprite(560));
+    sd.orbits.forEach((o, j) => {
+      /* 성단 뷰 마커는 계 뷰 확대와 무관하게 제 크기를 지킨다 */
+      const mr = 46 * (o.sz / 3);
+      const mp = new THREE.Group();
+      mp.add(makeGlyphBillboard(o, mr));
+      if (o.type === 'vowel') makeSaturnRing(mp, mr, o);
+      else makeConsRing(mp, mr, o);
+      const a = j / sd.orbits.length * Math.PI * 2;
+      mp.position.set(Math.cos(a) * 210, 0, Math.sin(a) * 210);
+      marker.add(mp);
+    });
+    marker.scale.setScalar(0.001);
+    marker.visible = false;
+    group.add(marker);
+
+    /* --- 자소 → 기울인 궤도면 + 행성 (180°를 자소 수로 나눠 랜덤 배치) --- */
+    const tilts = syllableTilts(sd.orbits.length);
+    const jamos = [];
+    sd.orbits.forEach((o, j) => {
+      const jGroup = new THREE.Group();
+      jGroup.quaternion.copy(tilts[j]);
+      group.add(jGroup);
+
+      /* 궤적 (v13 곡선 → 기울인 평면) */
+      const trajArr = new Float32Array((NPT + 1) * 3);
+      o.pts.forEach(([x, y], k) => {
+        trajArr[k * 3] = x * SCALE; trajArr[k * 3 + 1] = 0; trajArr[k * 3 + 2] = y * SCALE;
       });
-      marker.scale.setScalar(0.001);
-      marker.visible = false;
-      group.add(marker);
+      const trajGeo = new THREE.BufferGeometry();
+      trajGeo.setAttribute('position', new THREE.BufferAttribute(trajArr, 3));
+      trajGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((NPT + 1) * 3), 3));
+      const trajMat = new THREE.LineBasicMaterial({
+        vertexColors: true, transparent: true, opacity: 0.9,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      });
+      const traj = new THREE.Line(trajGeo, trajMat);
+      traj.geometry.setDrawRange(0, 2);
+      jGroup.add(traj);
 
-      /* --- 자소 → 기울인 궤도면 + 행성 (180°를 자소 수로 나눠 랜덤 배치) --- */
-      const tilts = syllableTilts(sd.orbits.length);
-      const jamos = [];
-      sd.orbits.forEach((o, j) => {
-        const jGroup = new THREE.Group();
-        jGroup.quaternion.copy(tilts[j]);
-        group.add(jGroup);
+      /* 궤적 글로우 — 정점색 가산합성 4겹 */
+      const glowMat = new THREE.LineBasicMaterial({
+        vertexColors: true, transparent: true, opacity: 0.15,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      });
+      const glows = [];
+      for (let gi = 0; gi < 4; gi++) {
+        const g = new THREE.Line(trajGeo, glowMat);
+        jGroup.add(g);
+        glows.push(g);
+      }
 
-        /* 궤적 (v13 곡선 → 기울인 평면) */
-        const trajArr = new Float32Array((NPT + 1) * 3);
+      /* 병서(쌍둥이) — 같은 궤도를 5° 틀어 한 벌 더 깔아 겹궤도를 만든다 */
+      let twinLines = null, twinQ = null;
+      if (o.tense) {
+        twinQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 5 * Math.PI / 180);
+        const twinArr = new Float32Array((NPT + 1) * 3);
         o.pts.forEach(([x, y], k) => {
-          trajArr[k * 3] = x * SCALE; trajArr[k * 3 + 1] = 0; trajArr[k * 3 + 2] = y * SCALE;
+          const v = new THREE.Vector3(x * SCALE, 0, y * SCALE).applyQuaternion(twinQ);
+          twinArr[k * 3] = v.x; twinArr[k * 3 + 1] = v.y; twinArr[k * 3 + 2] = v.z;
         });
-        const trajGeo = new THREE.BufferGeometry();
-        trajGeo.setAttribute('position', new THREE.BufferAttribute(trajArr, 3));
-        trajGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((NPT + 1) * 3), 3));
-        const trajMat = new THREE.LineBasicMaterial({
-          vertexColors: true, transparent: true, opacity: 0.9,
-          blending: THREE.AdditiveBlending, depthWrite: false,
-        });
-        const traj = new THREE.Line(trajGeo, trajMat);
-        traj.geometry.setDrawRange(0, 2);
-        jGroup.add(traj);
-
-        /* 궤적 글로우 — 정점색 가산합성 4겹 */
-        const glowMat = new THREE.LineBasicMaterial({
-          vertexColors: true, transparent: true, opacity: 0.15,
-          blending: THREE.AdditiveBlending, depthWrite: false,
-        });
-        const glows = [];
+        const tGeo = new THREE.BufferGeometry();
+        tGeo.setAttribute('position', new THREE.BufferAttribute(twinArr, 3));
+        tGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((NPT + 1) * 3), 3));
+        const tLine = new THREE.Line(tGeo, trajMat);
+        tLine.geometry.setDrawRange(0, 2);
+        jGroup.add(tLine);
+        const tGlows = [];
         for (let gi = 0; gi < 4; gi++) {
-          const g = new THREE.Line(trajGeo, glowMat);
+          const g = new THREE.Line(tGeo, glowMat);
           jGroup.add(g);
-          glows.push(g);
+          tGlows.push(g);
         }
+        twinLines = [tLine, ...tGlows];
+      }
 
-        /* 병서(쌍둥이) — 같은 궤도를 5° 틀어 한 벌 더 깔아 겹궤도를 만든다 */
-        let twinLines = null, twinQ = null;
-        if (o.tense) {
-          twinQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 5 * Math.PI / 180);
-          const twinArr = new Float32Array((NPT + 1) * 3);
-          o.pts.forEach(([x, y], k) => {
-            const v = new THREE.Vector3(x * SCALE, 0, y * SCALE).applyQuaternion(twinQ);
-            twinArr[k * 3] = v.x; twinArr[k * 3 + 1] = v.y; twinArr[k * 3 + 2] = v.z;
-          });
-          const tGeo = new THREE.BufferGeometry();
-          tGeo.setAttribute('position', new THREE.BufferAttribute(twinArr, 3));
-          tGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array((NPT + 1) * 3), 3));
-          const tLine = new THREE.Line(tGeo, trajMat);
-          tLine.geometry.setDrawRange(0, 2);
-          jGroup.add(tLine);
-          const tGlows = [];
-          for (let gi = 0; gi < 4; gi++) {
-            const g = new THREE.Line(tGeo, glowMat);
-            jGroup.add(g);
-            tGlows.push(g);
+      /* 반짝이는 부스러기 */
+      const ND = 90;
+      const dGeo = new THREE.BufferGeometry();
+      dGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
+      dGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
+      const debris = new THREE.Points(dGeo, new THREE.PointsMaterial({
+        size: 0.9, map: STAR_SPRITE, vertexColors: true, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      debris.frustumCulled = false;
+      jGroup.add(debris);
+      const dust = {
+        age: new Float32Array(ND).fill(99), life: new Float32Array(ND).fill(1),
+        vel: new Float32Array(ND * 3), ph: new Float32Array(ND), idx: 0, acc: 0,
+      };
+      const elC = C3(o.col);
+      const trailC = C3(o.trail);
+
+      const NB = 14;
+      const bGeo = new THREE.BufferGeometry();
+      bGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NB * 3), 3));
+      bGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NB * 3), 3));
+      const debrisBig = new THREE.Points(bGeo, new THREE.PointsMaterial({
+        size: 4, map: STAR_SPRITE, vertexColors: true, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      debrisBig.frustumCulled = false;
+      jGroup.add(debrisBig);
+      const dustBig = {
+        age: new Float32Array(NB).fill(99), life: new Float32Array(NB).fill(1),
+        vel: new Float32Array(NB * 3), ph: new Float32Array(NB), idx: 0, acc: 0,
+      };
+
+      /* 행성 — 본체 없는 고리 천체. 자음: 正圓 오방색 링 띠 · 모음: 천지인 띠 + 위성.
+         본체 자리엔 자소 빌보드가 떠서 글자가 그대로 읽힌다 */
+      const radius = o.sz;
+      const planet = new THREE.Group();
+      planet.add(makeGlyphBillboard(o, radius));
+      planet.userData.sysIndex = sysIndex;
+      planet.userData.jamoIndex = j;
+      let moonGrp = null;
+      if (o.type === 'vowel') {
+        makeSaturnRing(planet, radius, o);
+        if (o.moons) {
+          moonGrp = new THREE.Group();
+          for (let m = 0; m < o.moons; m++) {
+            const mm = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.26, 16, 16), planetMaterial(o));
+            const ma = m / o.moons * Math.PI * 2;
+            mm.position.set(Math.cos(ma) * radius * 3.1, 0, Math.sin(ma) * radius * 3.1);
+            moonGrp.add(mm);
           }
-          twinLines = [tLine, ...tGlows];
+          planet.add(moonGrp);
         }
+      } else {
+        makeConsRing(planet, radius, o);
+      }
+      jGroup.add(planet);
 
-        /* 반짝이는 부스러기 */
-        const ND = 90;
-        const dGeo = new THREE.BufferGeometry();
-        dGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
-        dGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(ND * 3), 3));
-        const debris = new THREE.Points(dGeo, new THREE.PointsMaterial({
-          size: 0.9, map: STAR_SPRITE, vertexColors: true, transparent: true,
-          blending: THREE.AdditiveBlending, depthWrite: false,
-        }));
-        debris.frustumCulled = false;
-        jGroup.add(debris);
-        const dust = {
-          age: new Float32Array(ND).fill(99), life: new Float32Array(ND).fill(1),
-          vel: new Float32Array(ND * 3), ph: new Float32Array(ND), idx: 0, acc: 0,
-        };
-        const elC = C3(o.col);
-        const trailC = C3(o.trail);
+      /* 띠·위성이 닿는 가장 바깥 — 반짝이는 이 밖에서만 인다 */
+      const auraR = radius * (o.type === 'vowel'
+        ? Math.max(2.4 + (Math.max(o.beltH | 0, o.beltV | 0) - 1) * 0.5, o.moons ? 3.4 : 0, 2.4)
+        : 2.3);
 
-        const NB = 14;
-        const bGeo = new THREE.BufferGeometry();
-        bGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NB * 3), 3));
-        bGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(NB * 3), 3));
-        const debrisBig = new THREE.Points(bGeo, new THREE.PointsMaterial({
-          size: 4, map: STAR_SPRITE, vertexColors: true, transparent: true,
-          blending: THREE.AdditiveBlending, depthWrite: false,
-        }));
-        debrisBig.frustumCulled = false;
-        jGroup.add(debrisBig);
-        const dustBig = {
-          age: new Float32Array(NB).fill(99), life: new Float32Array(NB).fill(1),
-          vel: new Float32Array(NB * 3), ph: new Float32Array(NB), idx: 0, acc: 0,
-        };
+      const planetLabel = makeLabelEl(
+        `<span class="ring-icon"></span><span class="name">${o.glyph}</span>`,
+        o.col, () => selectPlanet(sysIndex, j));
+      planet.add(planetLabel);
 
-        /* 행성 — 본체 없는 고리 천체. 자음: 正圓 오방색 링 띠 · 모음: 천지인 띠 + 위성.
-           본체 자리엔 자소 빌보드가 떠서 글자가 그대로 읽힌다 */
-        const radius = o.sz;
-        const planet = new THREE.Group();
-        planet.add(makeGlyphBillboard(o, radius));
-        planet.userData.sysIndex = sysIndex;
-        planet.userData.jamoIndex = j;
-        let moonGrp = null;
-        if (o.type === 'vowel') {
-          makeSaturnRing(planet, radius, o);
-          if (o.moons) {
-            moonGrp = new THREE.Group();
-            for (let m = 0; m < o.moons; m++) {
-              const mm = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.26, 16, 16), planetMaterial(o));
-              const ma = m / o.moons * Math.PI * 2;
-              mm.position.set(Math.cos(ma) * radius * 3.1, 0, Math.sin(ma) * radius * 3.1);
-              moonGrp.add(mm);
-            }
-            planet.add(moonGrp);
-          }
-        } else {
-          makeConsRing(planet, radius, o);
-        }
-        jGroup.add(planet);
-
-        /* 띠·위성이 닿는 가장 바깥 — 반짝이는 이 밖에서만 인다 */
-        const auraR = radius * (o.type === 'vowel'
-          ? Math.max(2.4 + (Math.max(o.beltH | 0, o.beltV | 0) - 1) * 0.5, o.moons ? 3.4 : 0, 2.4)
-          : 2.3);
-
-        const planetLabel = makeLabelEl(
-          `<span class="ring-icon"></span><span class="name">${o.glyph}</span>`,
-          o.col, () => selectPlanet(sysIndex, j));
-        planet.add(planetLabel);
-
-        jamos.push({
-          ...o, jGroup, planet, planetLabel, moonGrp, traj, trajMat, glows, auraR,
-          twinLines, twinQ,
-          debris, dust, debrisBig, dustBig, elC, trailC,
-          /* age0 = 작도 시작 시각(음절·자소 순서대로 시차). 되감기 기준점 */
-          age: -(si * 0.6 + j * 0.4), age0: -(si * 0.6 + j * 0.4), tc: 0,
-        });
-      });
-
-      cGroup.add(group);
-      wordEntry.systems.push(sysIndex);
-      systems.push({
-        index: sysIndex, wordIndex: wi, clusterIndex: wi,
-        char: sd.char, word: b.name, el: sd.el,
-        onset: sd.onset, vowel: sd.vowel, coda: sd.coda,
-        pos, group, star, sunLabel, sunOffLabel, compass, marker, jamos, SCALE, sysF: 1,
+      jamos.push({
+        ...o, jGroup, planet, planetLabel, moonGrp, traj, trajMat, glows, auraR,
+        twinLines, twinQ,
+        debris, dust, debrisBig, dustBig, elC, trailC,
+        /* age0 = 작도 시작 시각(음절·자소 순서대로 시차). 되감기 기준점 */
+        age: -(si * 0.6 + j * 0.4), age0: -(si * 0.6 + j * 0.4), tc: 0,
       });
     });
+
+    cGroup.add(group);
+    wordEntry.systems.push(sysIndex);
+    systems.push({
+      index: sysIndex, wordIndex: wi, clusterIndex: wi,
+      char: sd.char, word: b.name, el: sd.el,
+      onset: sd.onset, vowel: sd.vowel, coda: sd.coda,
+      pos, group, star, sunLabel, sunOffLabel, compass, marker, jamos, SCALE, sysF: 1,
+    });
+  });
 
   return wordEntry;
 }
