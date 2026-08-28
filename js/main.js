@@ -456,42 +456,29 @@ function sinsooEdges(J) {
   return out;
 }
 function buildSinsoo(img, spec) {
-  const { pts, w, h } = sinsooSample(img, 900);
-  const joints = sinsooJoints(pts, 14);
+  const { pts, w, h } = sinsooSample(img, 7000);
+  const joints = sinsooJoints(pts.slice(0, 500), 14);
   const S = SINSOO_SIZE / Math.max(w, h);
-  /* 수직 평면(로컬 XY)에 세운다 — 은하를 둘러싼 네 폭 병풍처럼.
-     카메라가 반대편으로 돌면 그 방위의 사신수가 정면으로 마주 보인다 */
   const toXY = ([x, y]) => [(x - w / 2) * S, (h / 2 - y) * S];
 
   const group = new THREE.Group();
 
-  /* 라인아트 원화 — 흰 선 그대로를 반투명 가산 평면으로 띄운다 */
-  const imgTex = new THREE.Texture(img);
-  imgTex.colorSpace = THREE.SRGBColorSpace;
-  imgTex.needsUpdate = true;
-  const imgMat = new THREE.MeshBasicMaterial({
-    map: imgTex, transparent: true, opacity: 0,
-    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-  });
-  const imgMesh = new THREE.Mesh(new THREE.PlaneGeometry(w * S, h * S), imgMat);
-  imgMesh.position.z = -30;                   /* 별·선보다 살짝 뒤 */
-  group.add(imgMesh);
-
-  /* 잔별 실루엣 + 관절별 — 기존 별 셰이더(반짝임 내장)를 그대로 쓴다 */
+  /* 원화 라인을 통째로 별로 치환 — 선을 따라 촘촘히 심은 별밭이
+     제각각의 위상으로 반짝여 형상 전체가 번쩍인다 */
   const all = pts.concat(joints);
   let i = 0;
   const field = makeStarField({
     count: all.length,
     sizeMin: 0, sizeMax: 0, palette: [0xffffff],
-    twinkleAmp: 0.55, maxPx: 10,
+    twinkleAmp: 0.75, maxPx: 10,
     generate: () => {
       const k = i++;
       const [x, y] = toXY(all[k]);
       const joint = k >= pts.length;
       return {
-        x, y, z: gauss() * 26,
-        color: joint ? 0xfff4d8 : 0xcfd9ff,
-        size: joint ? 1400 + Math.random() * 700 : 260 + Math.pow(Math.random(), 1.6) * 560,
+        x: x + gauss() * S, y: y + gauss() * S, z: gauss() * 26,
+        color: joint ? 0xfff4d8 : (Math.random() < 0.12 ? 0xffffff : 0xcfd9ff),
+        size: joint ? 1700 + Math.random() * 800 : 380 + Math.pow(Math.random(), 2.0) * 950,
       };
     },
   });
@@ -552,7 +539,7 @@ function buildSinsoo(img, spec) {
   group.visible = showStars;
   scene.add(group);
   sinsoos.push({
-    group, axis: spec.axis, field, lineMat, imgMat, spark, path, pathLen: cum,
+    group, axis: spec.axis, field, lineMat, spark, path, pathLen: cum,
     phase: Math.random() * Math.PI * 2,
   });
 }
@@ -2016,8 +2003,7 @@ function animate() {
     const focus = smooth(facing, 0.15, 0.85);
     const flicker = 0.86 + 0.14 * Math.sin(elapsedTime * 1.6 + s.phase);
     s.field.material.uniforms.uTime.value = elapsedTime;
-    s.field.material.uniforms.uAlpha.value = galaxyF * (0.45 + 0.55 * focus);
-    s.imgMat.opacity = galaxyF * (0.22 + 0.78 * focus) * flicker;
+    s.field.material.uniforms.uAlpha.value = galaxyF * (0.45 + 0.55 * focus) * flicker;
     s.lineMat.uniforms.uOpacity.value = galaxyF * (0.18 + 0.82 * focus);
 
     /* 빛이 별자리 선을 타고 한 붓으로 돈다 (한 바퀴 9초) */
