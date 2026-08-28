@@ -320,7 +320,7 @@ function galaxyGenerate() {
      팔은 바깥 꼬리에서 가늘게 시작해 안으로 감길수록 두꺼워지고,
      두꺼워진 머리는 빈 눈(R_EYE)을 한 바퀴 반 감아 돌아 속이 뚫려 보인다.
      색은 기존 벌지/팔/성운 팔레트를 그대로 섞어 쓴다 */
-  const N_ARM = 15500, N_HII = 450;                    /* 팔마다 → 총 31900 */
+  const N_ARM = 22000, N_HII = 650;                    /* 팔마다 → 총 45300 */
   const R_EYE = 1600;                                  /* 눈(공동) 반지름 */
   const R_FAR = 8800;                                  /* 꼬리 시작이 눈에서 떨어진 거리 */
   const CURL = 1.9 * Math.PI;                          /* 감기는 총 각도 */
@@ -328,6 +328,7 @@ function galaxyGenerate() {
   const cols = [
     0xfff4d8, 0xffe9b8, 0xffffff, 0xffddaa,            /* 구 벌지(온색) */
     0xdfe8ff, 0xffffff, 0xcdd8ff, 0xfff2d8,            /* 구 팔(한색) */
+    0xffd75e, 0x9fc0ff, 0xffb3c8, 0xbfffe0, 0xffa86e,  /* 금·청·분홍·옥·주황 */
   ];
   const pts = [];
   /* t 0(꼬리)→1(머리). 꼬리는 상대 눈 너머 바깥 테를 감싸고 출발해(태극 맞물림)
@@ -370,9 +371,9 @@ function galaxyGenerate() {
 }
 
 const galaxy = makeStarField({
-  count: 31900,
+  count: 45300,
   sizeMin: 0, sizeMax: 0, palette: [0xffffff],
-  twinkleAmp: 0.12,
+  twinkleAmp: 0.38,
   maxPx: 10,
   generate: galaxyGenerate(),
 });
@@ -391,7 +392,7 @@ const GALAXY_CENTER_DIR = galaxy.position.clone().normalize();
    ③ 관절별들을 최소신장트리 선으로 이어 별자리 선을 그린다.
    배치는 은하 기울기와 무관한 월드 X/Z 사방 — 나침반 HUD와 같은 축.
    카메라가 그 방위를 향하면(수평 내적) 별과 선이 밝아진다 */
-const SINSOO_DIST = 16000, SINSOO_SIZE = 19000;
+const SINSOO_DIST = 13500, SINSOO_SIZE = 19000;
 const SINSOO_SPEC = [
   { file: 'north.png', axis: new THREE.Vector3(0, 0, -1) },   /* 北 현무 */
   { file: 'south.png', axis: new THREE.Vector3(0, 0, 1) },    /* 南 주작 */
@@ -1976,7 +1977,8 @@ function animate() {
   const nc = nearestCluster();
   const dNear = nc.cluster ? nc.d : dOrigin;
   const clusterF = 1 - smooth(dNear, 26000, 72000);
-  const galaxyF = smooth(dNear, 9000, 42000);
+  /* 초기 자리(GAZE_DIST)에서 은하가 이미 만개해 있도록 램프를 앞당긴다 */
+  const galaxyF = smooth(dNear, 7000, 18500);
   /* 원점 구상 성단 = 첫 이름이 앉는 자리. 심은 이름이 없으면 우주에 띄우지 않는다 */
   const originF = clusters.length ? 1 - smooth(dOrigin, 26000, 72000) : 0;
 
@@ -1992,9 +1994,11 @@ function animate() {
   clusterStream.material.uniforms.uAlpha.value = originF;
   galaxy.material.uniforms.uAlpha.value = galaxyF;
 
-  /* ----- 사신수 별자리: 기본 은은히 보이고, 그 방위를 향하면 100%로 짙어진다 ----- */
+  /* ----- 사신수 별자리: 기본 은은히 보이고, 그 방위를 향하면 100%로 짙어진다.
+     은하 램프와 따로, 계(界) 뷰만 벗어나면 성단 단계부터 바로 차오른다 ----- */
   camera.getWorldDirection(CAM_FWD);
   const fwLen = Math.hypot(CAM_FWD.x, CAM_FWD.z) || 1;
+  const sinsooF = smooth(dNear, 260, 1200);
   for (const s of sinsoos) {
     /* 그림은 카메라와 무관하게 늘 정면 — 화면 정렬 빌보드 */
     s.group.quaternion.copy(camera.quaternion);
@@ -2003,8 +2007,8 @@ function animate() {
     const focus = smooth(facing, 0.15, 0.85);
     const flicker = 0.86 + 0.14 * Math.sin(elapsedTime * 1.6 + s.phase);
     s.field.material.uniforms.uTime.value = elapsedTime;
-    s.field.material.uniforms.uAlpha.value = galaxyF * (0.45 + 0.55 * focus) * flicker;
-    s.lineMat.uniforms.uOpacity.value = galaxyF * (0.18 + 0.82 * focus);
+    s.field.material.uniforms.uAlpha.value = sinsooF * (0.62 + 0.38 * focus) * flicker;
+    s.lineMat.uniforms.uOpacity.value = sinsooF * (0.28 + 0.72 * focus);
 
     /* 빛이 별자리 선을 타고 한 붓으로 돈다 (한 바퀴 9초) */
     const head = ((elapsedTime / 9 + s.phase) % 1) * s.pathLen;
@@ -2012,7 +2016,7 @@ function animate() {
     const seg = s.path.find(p => head < p.cum + p.len) || s.path[s.path.length - 1];
     const f = Math.min(1, (head - seg.cum) / seg.len);
     s.spark.position.set(seg.ax + (seg.bx - seg.ax) * f, seg.ay + (seg.by - seg.ay) * f, 10);
-    s.spark.material.opacity = galaxyF * (0.35 + 0.65 * focus)
+    s.spark.material.opacity = sinsooF * (0.35 + 0.65 * focus)
       * (0.75 + 0.25 * Math.sin(elapsedTime * 7 + s.phase));
   }
 
@@ -2239,7 +2243,7 @@ addEventListener('resize', () => {
 /* 빈 입력으로 여니 첫 화면은 은하 뎁스 — 은하를 화면 한가운데 두고
    원반 법선에서 GAZE_TILT 만큼 비껴 내려다봐 사선 타원으로 보이게 한다.
    거리는 galaxyF가 다 차오르는 42000 밖으로 잡아 은하가 흐려지지 않는다 */
-const GAZE_TILT = 0.55, GAZE_DIST = 30000;
+const GAZE_TILT = 0.55, GAZE_DIST = 20000;
 {
   const c = galaxy.position;
   const n = new THREE.Vector3(0, 1, 0).applyEuler(GALAXY_TILT).normalize();  /* 원반 법선 */
