@@ -441,7 +441,19 @@ function sinsooEdges(J) {
     inT.push(be[1]);
     left.splice(left.indexOf(be[1]), 1);
   }
-  return edges;
+  /* 깊이우선 순서로 재배열 — 빛이 이웃 간선으로 이어 달리도록 */
+  const adj = J.map(() => []);
+  for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }
+  const seen = new Set([0]), stack = [0], out = [];
+  while (stack.length) {
+    const a = stack[stack.length - 1];
+    const b = adj[a].find(n => !seen.has(n));
+    if (b === undefined) { stack.pop(); continue; }
+    seen.add(b);
+    out.push([a, b]);
+    stack.push(b);
+  }
+  return out;
 }
 function buildSinsoo(img, spec) {
   const { pts, w, h } = sinsooSample(img, 900);
@@ -485,25 +497,64 @@ function buildSinsoo(img, spec) {
   });
   group.add(field);
 
-  /* 별자리 선 */
-  const verts = [];
+  /* 별자리 선 — 빛(혜성 머리)이 선을 타고 흐르는 셰이더.
+     정점마다 경로 누적거리 aD를 실어 두고, uHead가 그 거리축을 달린다 */
+  const verts = [], dists = [], path = [];
+  let cum = 0;
   for (const [a, b] of sinsooEdges(joints)) {
     const [ax, ay] = toXY(joints[a]), [bx, by] = toXY(joints[b]);
+    const len = Math.hypot(bx - ax, by - ay);
     verts.push(ax, ay, 0, bx, by, 0);
+    dists.push(cum, cum + len);
+    path.push({ ax, ay, bx, by, len, cum });
+    cum += len;
   }
   const lineGeo = new THREE.BufferGeometry();
   lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
-  const lineMat = new THREE.LineBasicMaterial({
-    color: 0xcfe0ff, transparent: true, opacity: 0,
-    blending: THREE.AdditiveBlending, depthWrite: false,
+  lineGeo.setAttribute('aD', new THREE.BufferAttribute(new Float32Array(dists), 1));
+  const lineMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uHead: { value: 0 },
+      uOpacity: { value: 0 },
+      uTail: { value: SINSOO_SIZE * 0.16 },   /* 꼬리 길이 */
+      uColor: { value: new THREE.Color(0xcfe0ff) },
+    },
+    vertexShader: /* glsl */`
+  attribute float aD;
+  varying float vD;
+  void main() {
+    vD = aD;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }`,
+    fragmentShader: /* glsl */`
+  uniform float uHead, uOpacity, uTail;
+  uniform vec3 uColor;
+  varying float vD;
+  void main() {
+    float d = uHead - vD;                     /* 양수 = 머리 지나간 자리 */
+    float pulse = d >= 0.0 ? exp(-d / uTail) : exp(d * 0.004);
+    float a = uOpacity * (0.35 + 1.4 * pulse);
+    gl_FragColor = vec4(uColor + vec3(0.85) * pulse, a);
+  }`,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
   });
   group.add(new THREE.LineSegments(lineGeo, lineMat));
 
+  /* 빛 머리 — 선 위를 달리는 스파크 (4갈래 별 스프라이트) */
+  const spark = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: STAR_SPRITE, transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, color: 0xffffff,
+  }));
+  spark.scale.setScalar(SINSOO_SIZE * 0.06);
+  group.add(spark);
+
   group.position.copy(spec.axis).multiplyScalar(SINSOO_DIST);
-  group.lookAt(0, 0, 0);                      /* 그림 정면이 은하 중심을 향한다 */
   group.visible = showStars;
   scene.add(group);
-  sinsoos.push({ group, axis: spec.axis, field, lineMat, imgMat, phase: Math.random() * Math.PI * 2 });
+  sinsoos.push({
+    group, axis: spec.axis, field, lineMat, imgMat, spark, path, pathLen: cum,
+    phase: Math.random() * Math.PI * 2,
+  });
 }
 SINSOO_SPEC.forEach(spec => {
   const img = new Image();
@@ -1958,13 +2009,25 @@ function animate() {
   camera.getWorldDirection(CAM_FWD);
   const fwLen = Math.hypot(CAM_FWD.x, CAM_FWD.z) || 1;
   for (const s of sinsoos) {
+    /* 그림은 카메라와 무관하게 늘 정면 — 화면 정렬 빌보드 */
+    s.group.quaternion.copy(camera.quaternion);
+
     const facing = (CAM_FWD.x * s.axis.x + CAM_FWD.z * s.axis.z) / fwLen;
     const focus = smooth(facing, 0.15, 0.85);
     const flicker = 0.86 + 0.14 * Math.sin(elapsedTime * 1.6 + s.phase);
     s.field.material.uniforms.uTime.value = elapsedTime;
     s.field.material.uniforms.uAlpha.value = galaxyF * (0.45 + 0.55 * focus);
     s.imgMat.opacity = galaxyF * (0.22 + 0.78 * focus) * flicker;
-    s.lineMat.opacity = galaxyF * (0.15 + 0.85 * focus) * flicker;
+    s.lineMat.uniforms.uOpacity.value = galaxyF * (0.18 + 0.82 * focus);
+
+    /* 빛이 별자리 선을 타고 한 붓으로 돈다 (한 바퀴 9초) */
+    const head = ((elapsedTime / 9 + s.phase) % 1) * s.pathLen;
+    s.lineMat.uniforms.uHead.value = head;
+    const seg = s.path.find(p => head < p.cum + p.len) || s.path[s.path.length - 1];
+    const f = Math.min(1, (head - seg.cum) / seg.len);
+    s.spark.position.set(seg.ax + (seg.bx - seg.ax) * f, seg.ay + (seg.by - seg.ay) * f, 10);
+    s.spark.material.opacity = galaxyF * (0.35 + 0.65 * focus)
+      * (0.75 + 0.25 * Math.sin(elapsedTime * 7 + s.phase));
   }
 
   for (const f of jamoStars.children) {
