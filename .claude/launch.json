@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "galaxy_v5",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /tmp && exec python3 -m http.server 8091 --directory \"/Users/1101x/Library/Mobile Documents/com~apple~CloudDocs/한글 이름 추상화/04 galaxy geometry/galaxy_v5\""
+      ],
+      "port": 8091
+    },
+    {
+      "name": "galaxy_v6",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /tmp && exec python3 -m http.server 8092 --directory \"/Users/1101x/Library/Mobile Documents/com~apple~CloudDocs/한글 이름 추상화/04 galaxy geometry/galaxy_v6\""
+      ],
+      "port": 8092
+    },
+    {
+      "name": "v6_ai수정본",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /tmp && exec python3 -m http.server 8093 --directory \"/Users/1101x/Library/Mobile Documents/com~apple~CloudDocs/한글 이름 추상화/04 galaxy geometry/galaxy_v6_ai수정본\""
+      ],
+      "port": 8093
+    }
+  ]
+}
