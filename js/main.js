@@ -11,9 +11,9 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
    코드북 — 훈민정음 제자원리 · 오행 · 음양 (별도 파일)
 ═════════════════════════════════════════════════════════════ */
 import {
-  JAMO, EL, OL, VL, CL, CODA_PARTS, decompose,
+  JAMO, EL, CODA_PARTS, decompose,
   CURVE, FAMKO, TWIN, VSEQ, YANG, YIN, SAMH, VOWEL_EL,
-  IRR, jejaText, VBASE, VFIRST, VSECOND, FLIP_TWICE,
+  jejaText, FLIP_TWICE,
   eqText, curveTurns, nameReading, OHBANG_KO,
 } from './codebook.js';
 
@@ -741,7 +741,6 @@ function makeGlowSprite(size) {
 ═════════════════════════════════════════════════════════════ */
 /* 행성 재질 사양 = 오행 표(EL) 그 자체. 자음은 오행, 모음은 달 */
 const planetSpec = (o) => (o.type === 'vowel' ? VOWEL_EL : EL[o.el]);
-const SUN_RADIUS = 3.4;
 const MAX_ORBIT = 55;         /* 가장 큰 궤적 반경 (행성·항성이 상대적으로 커 보이게 축소) 궤도 지름 */
 const NPT = NS;               /* 궤적 샘플 수 = v13 궤도 샘플 수 */
 const REVEAL_DUR = 6;         /* 궤도 작도 6초 */
@@ -1233,38 +1232,6 @@ function buildCluster(b, wi) {
   return wordEntry;
 }
 
-// Populate dropdown menus
-function refreshDropdowns() {
-  const wordsDropdown = document.getElementById('dropdown-words');
-  const clustersDropdown = document.getElementById('dropdown-clusters');
-
-  if (wordsDropdown) {
-    wordsDropdown.innerHTML = '';
-    systems.forEach((sys) => {
-      const btn = document.createElement('button');
-      btn.textContent = `${sys.char}界`;
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        flyToSystem(sys.index);
-      });
-      wordsDropdown.appendChild(btn);
-    });
-  }
-
-  if (clustersDropdown) {
-    clustersDropdown.innerHTML = '';
-    words.forEach((wd) => {
-      const btn = document.createElement('button');
-      btn.textContent = `${wd.word} 星團`;
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        flyToWord(wd.index);
-      });
-      clustersDropdown.appendChild(btn);
-    });
-  }
-}
-
 /* nameList = [{text, pos}] — 우주에 심은 이름들 + 입력 중인 이름 하나(맨 뒤).
    이미 지어 둔 성단은 그대로 두고 달라진 성단부터 뒤만 다시 짓는다.
    (통째로 다시 지으면 심어 둔 이름의 별밭이 타자마다 새로 뿌려지고,
@@ -1296,7 +1263,6 @@ function buildAll(nameList) {
     clusters.push(e);
   }
 
-  refreshDropdowns();
   syncReadingButton();
 }
 
@@ -1388,19 +1354,6 @@ function flyToWord(wi) {
   if (!w) return;
   flyTo(() => w.pos.clone(), 700, 2.0);
 }
-function flyToCluster(ci) {
-  const c = clusters[ci];
-  if (!c) return;
-  flyTo(() => c.pos.clone(), 8000, 2.2);
-}
-/* 어절 성단 = 음절 계 여러 개를 함께 보는 거리 */
-function goCluster() {
-  const { word } = nearestWord();
-  flyTo(() => (word ? word.pos.clone() : new THREE.Vector3(0, 0, 0)), 700, 2.0);
-}
-function goGalaxy() {
-  flyTo(() => new THREE.Vector3(0, 0, 0), 62000, 2.8);
-}
 
 /* 행성 클릭 → 줌인 → 레터 오버레이 (뎁스 4) */
 function selectPlanet(si, ji) {
@@ -1416,13 +1369,6 @@ function selectPlanet(si, ji) {
   const dist = jm.sz * (jm.type === 'vowel' ? 8 : 6);
   flyTo(() => jm.planet.getWorldPosition(new THREE.Vector3()), dist, 1.5, () => openLetter(jm, s));
 }
-
-document.getElementById('btn-system')?.addEventListener('click', () => {
-  const { sys } = nearestSystem();
-  if (sys) flyToSystem(sys.index);
-});
-document.getElementById('btn-cluster')?.addEventListener('click', goCluster);
-document.getElementById('btn-galaxy')?.addEventListener('click', goGalaxy);
 
 document.getElementById('btn-toggle-stars').addEventListener('click', toggleStarsVisibility);
 

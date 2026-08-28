@@ -136,24 +136,11 @@ body {
   pointer-events: auto;
 }
 
-#topbar h1,
 #topbar h3 {
   display: flex;
   align-items: baseline;
   gap: 10px;
   font-weight: 300;
-}
-
-#topbar h1 .hanja {
-  font-size: 19px;
-  letter-spacing: 0.14em;
-  color: var(--ob-baek);
-}
-
-#topbar h1 .ko {
-  font-size: 11px;
-  letter-spacing: 0.34em;
-  color: var(--txt-dim);
 }
 
 /* 한자를 크게, 한글을 작게 병기하는 공통 버튼 */
@@ -406,73 +393,6 @@ body {
   background: var(--ob-baek);
   border-color: var(--ob-baek);
   color: #12100c;
-}
-
-/* ---------- 드롭다운 ---------- */
-.dropdown {
-  position: relative;
-  display: inline-block;
-  pointer-events: auto;
-}
-
-.dropdown-content {
-  display: none;
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 6px;
-  min-width: 140px;
-  z-index: 100;
-  max-height: 250px;
-  overflow-y: auto;
-  padding: 4px 0;
-  background: var(--ui-bg);
-  border: 1px solid var(--ui-border);
-  backdrop-filter: blur(10px);
-}
-
-.dropdown-content::-webkit-scrollbar {
-  width: 4px;
-}
-
-.dropdown-content::-webkit-scrollbar-thumb {
-  background: var(--ui-border);
-}
-
-.dropdown-content button {
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 9px 16px;
-  color: var(--txt);
-  font-family: inherit;
-  font-size: 13px;
-  text-align: right;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
-  letter-spacing: 0.08em;
-}
-
-.dropdown-content button:hover {
-  color: var(--ob-hwang);
-  background: rgba(226, 208, 168, 0.08);
-}
-
-.dropdown:hover .dropdown-content {
-  display: block;
-}
-
-.navlink .arrow {
-  font-size: 8px;
-  margin-left: 3px;
-  opacity: 0.6;
-  display: inline-block;
-  transition: transform 0.2s;
-}
-
-.dropdown:hover .navlink .arrow {
-  transform: rotate(180deg);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -841,10 +761,6 @@ body.divining #btn-reading {
   cursor: default;
 }
 
-#btn-reading:not(.ready) .br-arrow {
-  opacity: 0.25;
-}
-
 #btn-reading.ready {
   border-color: rgba(226, 208, 168, 0.4);
 }
@@ -854,22 +770,12 @@ body.divining #btn-reading {
   border-color: rgba(226, 208, 168, 0.6);
 }
 
-#btn-reading.ready:hover .br-arrow {
-  transform: translateX(4px);
-}
-
 #btn-reading .br-name {
   font-weight: 500;
 }
 
 #btn-reading .br-label {
   color: var(--txt-dim);
-}
-
-#btn-reading .br-arrow {
-  margin-left: 8px;
-  color: var(--txt-dim);
-  transition: transform 0.2s;
 }
 
 
