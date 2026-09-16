@@ -537,7 +537,6 @@ function buildSinsoo(img, spec) {
   group.add(spark);
 
   group.position.copy(spec.axis).multiplyScalar(SINSOO_DIST);
-  group.visible = showStars;
   scene.add(group);
   sinsoos.push({
     group, axis: spec.axis, field, lineMat, spark, path, pathLen: cum,
@@ -1012,7 +1011,6 @@ function buildCluster(b, wi) {
     /* 자모 별밭 — 원점 성단의 jamoStars와 같은 구성 */
     jamoFields().forEach(f => deco.add(f));
     deco.position.copy(cpos);
-    deco.children.forEach(f => { f.visible = showStars; });
     cGroup.add(deco);
     wordEntry.deco = deco;
   }
@@ -1042,7 +1040,6 @@ function buildCluster(b, wi) {
     /* --- 항성 = 노란 발광만 (자소 그래픽 없음) --- */
     const star = new THREE.Group();
     star.add(makeGlowSprite(26));
-    star.visible = showSun;
     group.add(star);
 
     const sunLabel = makeLabelEl(
@@ -1050,11 +1047,6 @@ function buildCluster(b, wi) {
       null, () => flyToSystem(sysIndex));
     sunLabel.element.classList.add('sun-label');
     group.add(sunLabel);
-
-    const sunOffLabel = makeLabelEl(
-      `<span class="sun-off-name">${sd.char}</span>`, null, () => flyToSystem(sysIndex));
-    sunOffLabel.element.classList.add('sun-off-label');
-    group.add(sunOffLabel);
 
     /* --- 오방 컴퍼스 (02 geometry_v3 UI) --- */
     const compass = makeCompass(group);
@@ -1220,7 +1212,7 @@ function buildCluster(b, wi) {
       index: sysIndex, wordIndex: wi, clusterIndex: wi, sylIndex: si,
       char: sd.char, word: b.name, el: sd.el,
       onset: sd.onset, vowel: sd.vowel, coda: sd.coda,
-      pos, group, star, sunLabel, sunOffLabel, compass, marker, jamos, SCALE, sysF: 1,
+      pos, group, sunLabel, compass, marker, jamos, SCALE, sysF: 1,
     });
   });
 
@@ -1265,10 +1257,6 @@ function buildAll(nameList) {
    카메라 연출 / 선택 (01 베이스 + 뎁스 4 연결)
 ═════════════════════════════════════════════════════════════ */
 let camTween = null;
-let showStars = true;
-let showSun = true;
-let showOrbit = true;
-let showName = true;
 
 function flyTo(getTargetPos, distance, duration = 1.6, onDone = null) {
   const toTargetFn = () => getTargetPos();
@@ -1369,9 +1357,11 @@ function alignCompass() {
 }
 document.getElementById('compass-hud').addEventListener('click', alignCompass);
 
-/* 바늘·원은 compass.svg가 그리고(북쪽을 따라 회전), 글자만 각 방위의 투영 자리에 찍는다 */
+/* 눈금판(compass_ew)은 동쪽을, 바늘(compass_ns)은 북쪽을 따라 따로 돌고,
+   글자는 각 방위의 투영 자리에 찍는다 — 기울여 볼 때 북↔동이 90°가 아니어도 서로 맞는다 */
 const compassHudEl = document.getElementById('compass-hud');
-const compassFace = compassHudEl.querySelector('.compass-face');
+const compassEw = compassHudEl.querySelector('.compass-ew');
+const compassNs = compassHudEl.querySelector('.compass-ns');
 const compassCtx = document.getElementById('compass-canvas').getContext('2d');
 function updateCompassHUD() {
   if (compassHudEl.classList.contains('hidden')) return;
@@ -1389,7 +1379,9 @@ function updateCompassHUD() {
   const N = dir(0, -1), S = dir(0, 1), E = dir(1, 0), W = dir(-1, 0);
   if (!N || !E) return;
 
-  compassFace.style.transform = `rotate(${Math.atan2(N.x, -N.y)}rad)`;
+  compassNs.style.transform = `rotate(${Math.atan2(N.x, -N.y)}rad)`;
+  /* 눈금은 판의 오른쪽(+90°)에 있으니, 그만큼 덜 돌려 동쪽에 맞춘다 */
+  compassEw.style.transform = `rotate(${Math.atan2(E.x, -E.y) - Math.PI / 2}rad)`;
 
   compassCtx.font = `300 ${w * 0.085}px "Noto Serif KR", serif`;
   compassCtx.fillStyle = '#e8e2cc';
@@ -2046,11 +2038,10 @@ function animate() {
 
       /* 페이드 (계 단위) */
       y.trajMat.opacity = 0.9 * sysF;
-      const orbitVisible = visible && showOrbit;
       y.planet.visible = visible;
-      y.traj.visible = orbitVisible;
-      for (const g of y.glows) g.visible = orbitVisible;
-      if (y.twinLines) for (const l of y.twinLines) l.visible = orbitVisible;
+      y.traj.visible = visible;
+      for (const g of y.glows) g.visible = visible;
+      if (y.twinLines) for (const l of y.twinLines) l.visible = visible;
       y.debris.visible = visible;
       y.debrisBig.visible = visible;
       /* 행성 이름 태그 비활성화 — 항성(sunLabel)에서만 이름 표시 */
@@ -2058,7 +2049,7 @@ function animate() {
       y.planetLabel.element.style.pointerEvents = 'none';
     }
 
-    s.compass.mat.opacity = showOrbit ? 0.07 * sysF : 0;
+    s.compass.mat.opacity = 0.07 * sysF;
 
     /* 성단 뷰 계 마커 — 계에 가까우면 숨기고 성단 거리에서 등장 */
     const mF = smooth(dS, 500, 2400) * (clusters[s.clusterIndex] ? clusters[s.clusterIndex].cF : 0);
@@ -2068,15 +2059,8 @@ function animate() {
       s.marker.rotation.y += dt * 0.05;
     }
 
-    const sOp = (showName && showSun) ? clusterF : 0;
-    s.sunLabel.element.style.opacity = sOp;
-    s.sunLabel.element.style.pointerEvents = sOp < 0.05 ? 'none' : 'auto';
-
-    const offOp = (showName && !showSun) ? clusterF * 0.5 : 0;
-    if (s.sunOffLabel) {
-      s.sunOffLabel.element.style.opacity = offOp;
-      s.sunOffLabel.element.style.pointerEvents = offOp < 0.05 ? 'none' : 'auto';
-    }
+    s.sunLabel.element.style.opacity = clusterF;
+    s.sunLabel.element.style.pointerEvents = clusterF < 0.05 ? 'none' : 'auto';
   }
 
   /* ----- 카메라 트윈 ----- */

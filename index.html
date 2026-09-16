@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>한글 이름 여행</title>
+  <link rel="icon" href="data:,">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script type="importmap">
@@ -23,9 +24,10 @@
 
   <h1 id="brand">한글 이름 여행</h1>
 
-  <!-- 좌상단 방위 표시기 — 바늘(SVG)은 북쪽을 따라 돌고, 글자는 캔버스에 찍는다 -->
+  <!-- 좌상단 방위 표시기 — 눈금판은 동쪽을, 바늘은 북쪽을 따로 따라 돌고, 글자는 캔버스에 찍는다 -->
   <button id="compass-hud" class="hidden" type="button" aria-label="방위계: 북쪽을 위로 정렬" title="북쪽을 위로 정렬">
-    <img class="compass-face" src="src/graphic/compass.svg" alt="">
+    <img class="compass-ew" src="src/graphic/compass_ew.svg" alt="">
+    <img class="compass-ns" src="src/graphic/compass_ns.svg" alt="">
     <canvas id="compass-canvas" width="308" height="308" aria-hidden="true"></canvas>
   </button>
 

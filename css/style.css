@@ -5,25 +5,16 @@
   /* 화면 단위 — 시안(1920×1080)의 1px. 화면이 작아지면 글자·틀·여백이 같은 비율로 준다 */
   --u: min(100vw / 1920, 100vh / 1080);
 
-  /* 먹빛 유리 — 우주 위에 얹는 UI 판 */
-  --ui-bg: rgba(16, 13, 10, 0.74);
   --line: #e8e2cc;
-  --ui-border: rgba(232, 226, 204, 0.35);
+  --ui-border: #e8e2cc;
   --txt: #e8e2cc;
   --txt-dim: rgba(232, 226, 204, 0.6);
 
-  /* 오방색 — UI에서 쓰는 색은 여기서만 꺼낸다 */
-  --ob-cheong: #3f7fb5;
-  /* 靑 東 木 */
-  --ob-jeok: #c1453a;
-  /* 赤 南 火 */
+  /* 오방색 — 라벨에 남은 둘 */
   --ob-hwang: #d8b551;
   /* 黃 中 土 */
   --ob-baek: #efe7d6;
   /* 白 西 金 */
-  --ob-heuk: #1a1a20;
-  /* 黑 北 水 */
-  --accent: var(--ob-jeok);
 
   /* 한지 */
   --hanji-ink: #221a12;
@@ -113,9 +104,10 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: calc(82 * var(--u));
+  /* 한 장을 가로 100%로 채운다 — 높이는 이미지 비율(7681×308)을 따른다 */
+  aspect-ratio: 7681 / 308;
   z-index: 21;
-  background: url("../src/graphic/loof_1@4x.png") left top / auto 100% repeat-x;
+  background: url("../src/graphic/loof@4x.png") left top / 100% 100% no-repeat;
   pointer-events: none;
 }
 
@@ -149,13 +141,6 @@ body {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  opacity: 0.85;
-  transition: opacity 0.2s;
-}
-
-#input-wrap:hover .input-frame,
-#input-wrap:focus-within .input-frame {
-  opacity: 1;
 }
 
 #nameInput {
@@ -231,12 +216,10 @@ body {
   font-size: calc(9.5 * var(--u));
   letter-spacing: 0.04em;
   cursor: pointer;
-  opacity: 0.85;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: transform 0.2s;
 }
 
 .view-btn:hover {
-  opacity: 1;
   transform: scale(1.06);
 }
 
@@ -283,18 +266,6 @@ body {
   letter-spacing: 0.18em;
 }
 
-.sun-off-label {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--ob-baek);
-  letter-spacing: 0.12em;
-  pointer-events: auto;
-  user-select: none;
-  white-space: nowrap;
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.95);
-  cursor: pointer;
-}
-
 /* ---------- 하단 타임바 — box_long 틀 ---------- */
 #timebar {
   position: fixed;
@@ -313,7 +284,7 @@ body {
 }
 
 #timebar .datetime {
-  font-size: calc(12.5 * var(--u));
+  font-size: calc(15 * var(--u));
   letter-spacing: 0.15em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -337,7 +308,7 @@ body {
   line-height: 1;
   color: var(--txt);
   background: transparent;
-  border: 1px solid var(--ui-border);
+  border: 1px solid rgba(232, 226, 204, 0.35);
   border-radius: 2px;
   cursor: pointer;
   transition: color 0.18s, border-color 0.18s, background 0.18s;
@@ -591,21 +562,23 @@ body.reading #letter-panel {
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  opacity: 0.9;
   transition: opacity 0.3s, transform 0.3s;
 }
 
-#compass-hud:hover {
-  opacity: 1;
-}
-
-#compass-hud .compass-face,
+#compass-hud .compass-ew,
+#compass-hud .compass-ns,
 #compass-hud canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+/* 바늘은 원판 높이의 76.68/154.23 — 여백을 둬 원판 안 원래 자리에 앉히고, 판 중심으로 돌린다 */
+#compass-hud .compass-ns {
+  padding: 25.14%;
+  object-fit: contain;
 }
 
 #compass-hud.hidden {
@@ -672,16 +645,11 @@ body:is(.reading, .divining) :is(#hanok-eave, #brand, #scale-hud, #input-wrap, #
   letter-spacing: 0.06em;
   white-space: nowrap;
   cursor: pointer;
-  opacity: 0.85;
   transition: opacity 0.2s;
 }
 
 #btn-reading.on {
   display: flex;
-}
-
-#btn-reading:hover {
-  opacity: 1;
 }
 
 #btn-reading .br-name {
