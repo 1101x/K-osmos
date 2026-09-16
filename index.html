@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>한글 이름 여행</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script type="importmap">
   {
@@ -18,49 +19,46 @@
 
 <body>
 
-  <header id="topbar">
-    <div class="brand">
-      <h3>한글 이름 여행</h3>
-    </div>
-  </header>
+  <div id="hanok-eave" aria-hidden="true"></div>
 
-  <!-- 우중앙 컨트롤 패널 -->
-  <div id="right-controls">
-    <button class="navlink glyph-btn" id="btn-toggle-stars"><b>星</b><em>별</em></button>
-    <button class="navlink glyph-btn" id="btn-toggle-orbit"><b>軌</b><em>궤도</em></button>
-    <button class="navlink glyph-btn" id="btn-toggle-name"><b>名</b><em>이름</em></button>
-  </div>
+  <h1 id="brand">한글 이름 여행</h1>
 
-  <!-- 이름 입력 — 펼친 두루마리 (SVG) -->
+  <!-- 좌상단 방위 표시기 — 바늘(SVG)은 북쪽을 따라 돌고, 글자는 캔버스에 찍는다 -->
+  <button id="compass-hud" class="hidden" type="button" aria-label="방위계: 북쪽을 위로 정렬" title="북쪽을 위로 정렬">
+    <img class="compass-face" src="src/graphic/compass.svg" alt="">
+    <canvas id="compass-canvas" width="308" height="308" aria-hidden="true"></canvas>
+  </button>
+
+  <!-- 이름 입력 -->
   <div id="input-wrap">
-    <svg class="scroll-svg" viewBox="0 0 500 60" xmlns="http://www.w3.org/2000/svg">
-      <!-- 중앙 종이 -->
-      <rect class="scroll-paper" x="26" y="10" width="448" height="40" />
-      <!-- 왼쪽 축 상단/본체/하단 -->
-      <rect class="scroll-cap" x="17" y="2" width="6" height="4" />
-      <rect class="scroll-rod" x="14" y="6" width="12" height="48" />
-      <rect class="scroll-cap" x="17" y="54" width="6" height="4" />
-      <!-- 오른쪽 축 상단/본체/하단 -->
-      <rect class="scroll-cap" x="477" y="2" width="6" height="4" />
-      <rect class="scroll-rod" x="474" y="6" width="12" height="48" />
-      <rect class="scroll-cap" x="477" y="54" width="6" height="4" />
-    </svg>
+    <img class="input-frame" src="src/graphic/box_input.svg" alt="">
     <input id="nameInput" type="text" maxlength="40" placeholder="이름을 입력해 우주에 남겨보세요">
   </div>
 
   <div id="scene-container"></div>
 
   <div id="scale-hud">
-    <p class="scale-label">지금 보고 있는 곳</p>
+    <p class="scale-label">지금 보고있는 곳</p>
     <p class="scale-name" id="scale-name"></p>
-    <p class="scale-hint">스크롤하여 확대, 우클릭으로 이동</p>
+    <p class="scale-hint">마우스 스크롤 확대 / 우클릭 이동</p>
+    <div class="view-btns">
+      <button class="view-btn" id="btn-view-galaxy" type="button">우주보기</button>
+      <button class="view-btn" id="btn-view-name" type="button">이름보기</button>
+    </div>
   </div>
 
   <!-- 좌하단 이름풀이 열기 -->
   <button id="btn-reading">
     <span class="br-name"></span>
-    <span class="br-label">이름풀이 〉</span>
+    <span class="br-label">이름 풀이 〉</span>
   </button>
+
+  <!-- 우하단 자음 오행표 -->
+  <aside id="ohaeng-legend">
+    <img class="knot" src="src/graphic/knot.svg" alt="">
+    <p class="lg-title">자음 오행표</p>
+    <div class="lg-cols" id="ohaeng-cols"></div>
+  </aside>
 
   <!-- 이름풀이 — 흑칠 자개(나전) 명함 -->
   <div id="reading-overlay" class="hidden">
@@ -114,10 +112,10 @@
   <footer id="timebar">
     <div class="datetime" id="datetime">—</div>
     <div class="transport">
-      <button class="tp-btn" id="tp-rewind" title="처음부터 다시 작도" aria-label="맨 뒤로">⟪</button>
+      <button class="tp-btn" id="tp-rewind" title="처음부터 다시 작도" aria-label="맨 뒤로">‹</button>
       <button class="tp-btn" id="tp-pause" title="일시정지" aria-label="일시정지">⏸</button>
       <button class="tp-btn" id="tp-play" title="재생" aria-label="재생">▶</button>
-      <button class="tp-btn" id="tp-end" title="작도 완료" aria-label="맨 앞으로">⟫</button>
+      <button class="tp-btn" id="tp-end" title="작도 완료" aria-label="맨 앞으로">›</button>
     </div>
   </footer>
 
@@ -146,11 +144,6 @@
       </footer>
       <div class="hanji-rule-bottom"></div>
     </aside>
-  </div>
-
-  <!-- 우하단 방위 표시기 (컴퍼스) -->
-  <div id="compass-hud" class="hidden">
-    <canvas id="compass-canvas" width="90" height="90"></canvas>
   </div>
 
   <script type="module" src="js/main.js"></script>
