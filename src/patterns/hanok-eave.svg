@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="104" viewBox="0 0 64 104">
+ <defs>
+  <linearGradient id="tile"><stop stop-color="#343934"/><stop offset=".35" stop-color="#777b6e"/><stop offset=".6" stop-color="#555b52"/><stop offset="1" stop-color="#242a28"/></linearGradient>
+  <linearGradient id="valley"><stop stop-color="#151c1b"/><stop offset=".5" stop-color="#4f554c"/><stop offset="1" stop-color="#202825"/></linearGradient>
+  <linearGradient id="ridge" x2="0" y2="1"><stop stop-color="#252d29"/><stop offset=".4" stop-color="#878a79"/><stop offset=".58" stop-color="#484f45"/><stop offset="1" stop-color="#101918"/></linearGradient>
+  <radialGradient id="cap"><stop stop-color="#748177"/><stop offset=".75" stop-color="#4b5852"/><stop offset="1" stop-color="#202d29"/></radialGradient>
+  <linearGradient id="pearl"><stop stop-color="#b8c8bd"/><stop offset=".45" stop-color="#b9c6cf"/><stop offset="1" stop-color="#dbcc9f"/></linearGradient>
+  <path id="petal" d="M0-2C-5-5-4-10 0-12 4-10 5-5 0-2Z"/>
+ </defs>
+ <path fill="url(#valley)" d="M0 13h64v64q-16 18-32 0Q16 95 0 77Z"/>
+ <path fill="url(#tile)" stroke="#939784" stroke-opacity=".3" d="M15 12h34l-2 72q-15 13-30 0Z"/>
+ <path d="M21 18v60M44 18v60" stroke="#c2c2a5" stroke-opacity=".18"/>
+ <circle cx="32" cy="86" r="16" fill="#131e1b"/>
+ <circle cx="32" cy="85" r="14.5" fill="url(#cap)" stroke="#9b9e84" stroke-width="1.2"/>
+ <g transform="translate(32 85)" fill="url(#pearl)" opacity=".84">
+  <use href="#petal"/><use href="#petal" transform="rotate(45)"/><use href="#petal" transform="rotate(90)"/><use href="#petal" transform="rotate(135)"/><use href="#petal" transform="rotate(180)"/><use href="#petal" transform="rotate(225)"/><use href="#petal" transform="rotate(270)"/><use href="#petal" transform="rotate(315)"/>
+  <circle r="2.4" fill="#d7c99d"/>
+ </g>
+ <path fill="url(#ridge)" d="M0 0h64v19H0Z"/>
+ <path d="M0 3h64M0 16h64" stroke="#b1b39b" stroke-opacity=".3"/>
+</svg>
