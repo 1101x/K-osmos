@@ -15,11 +15,6 @@
   /* 黃 中 土 */
   --ob-baek: #efe7d6;
   /* 白 西 金 */
-
-  /* 한지 */
-  --hanji-ink: #221a12;
-  --hanji-dim: #6b5942;
-  --hanji-line: rgba(90, 70, 44, 0.28);
 }
 
 /* 순바탕은 한자도 품고 있어서, 한자(U+3400–9FFF·F900–FAFF)만 범위에서 빼
@@ -71,46 +66,7 @@ body {
   display: block;
 }
 
-/* ---------- 한지 바탕 (이미지 없이 CSS만) ---------- */
-.hanji {
-  background-color: #e6dbc0;
-  background-image:
-    /* 세로 섬유 */
-    repeating-linear-gradient(90deg, rgba(120, 98, 66, .05) 0 1px, transparent 1px 3px),
-    /* 가로 발자국 */
-    repeating-linear-gradient(0deg, rgba(120, 98, 66, .035) 0 1px, transparent 1px 6px),
-    /* 닥섬유 얼룩 */
-    radial-gradient(58% 38% at 78% 82%, rgba(160, 132, 88, .22), transparent 70%),
-    radial-gradient(120% 95% at 18% 8%, rgba(255, 252, 240, .95), rgba(214, 196, 158, .6) 58%, rgba(176, 152, 110, .55));
-  color: var(--hanji-ink);
-  box-shadow:
-    0 22px 60px rgba(0, 0, 0, .66),
-    inset 0 0 70px rgba(150, 120, 74, .28);
-}
-
-/* 한지 가장자리 — 손으로 뜬 종이의 거친 결 */
-.hanji::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border: 1px solid rgba(120, 96, 60, .35);
-  box-shadow: inset 0 0 0 5px rgba(255, 250, 236, .35);
-}
-
 /* ---------- 지붕 — 한옥 처마 기와 (상단 전폭) ---------- */
-#hanok-eave {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  /* 한 장을 가로 100%로 채운다 — 높이는 이미지 비율(7681×308)을 따른다 */
-  aspect-ratio: 7681 / 308;
-  z-index: 21;
-  background: url("../src/graphic/loof@4x.png") left top / 100% 100% no-repeat;
-  pointer-events: none;
-}
-
 /* ---------- 우측 세로 제목 ---------- */
 #brand {
   position: fixed;
@@ -325,7 +281,7 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   행성 상세 — 훈민정음 판본 · 한지 UI
+   행성 상세 — 자소 풀이 카드 (피그마 card_jaso)
 ═══════════════════════════════════════════════════════════ */
 #letter-overlay {
   position: fixed;
@@ -367,17 +323,16 @@ body {
   background: rgba(226, 208, 168, 0.14);
 }
 
-/* --- 한지 풀이 종이 — 가로 판형, 우주 한가운데 --- */
+/* --- 자소 풀이 카드 — 피그마 card_jaso(1170×650), 우주 한가운데.
+   가로·세로를 명시해야 inset:0 + margin:auto 가운데 정렬이 선다
+   (transform은 등장·부유 애니메이션이 쓰므로 정렬에 못 쓴다) --- */
 #letter-panel {
   position: absolute;
   inset: 0;
   margin: auto;
   z-index: 45;
-  width: min(900px, 92vw);
-  height: fit-content;
-  max-height: 88vh;
-  overflow-y: auto;
-  padding: 30px 46px 26px;
+  width: calc(1170 * var(--u));
+  height: calc(650 * var(--u));
   isolation: isolate;
 }
 
@@ -426,127 +381,107 @@ body.reading #letter-panel {
     paper-drift 13s ease-in-out 1s infinite;
 }
 
-#letter-panel::-webkit-scrollbar {
-  width: 4px;
+.lp-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
-#letter-panel::-webkit-scrollbar-thumb {
-  background: rgba(90, 70, 44, 0.35);
-}
-
-/* 상단 두 줄 계선 · 하단 한 줄 계선 */
-.hanji-rule {
-  height: 0;
-  border-top: 2px solid var(--hanji-line);
-  border-bottom: 1px solid var(--hanji-line);
-  padding-top: 3px;
-  margin-bottom: 18px;
-}
-
-.hanji-rule-bottom {
-  margin-top: 20px;
-  border-top: 2px solid var(--hanji-line);
-}
-
-/* 머리 — 좌: 궤도 도형 + 자소 무리, 우: 큰 자소 */
-.hp-head {
+/* 글 묶음 — 시안: 카드 왼쪽에서 209, 위에서 85, 폭 794 (가운데보다 21px 오른쪽) */
+.lp-body {
+  position: absolute;
+  left: calc(209 * var(--u));
+  top: calc(85 * var(--u));
+  width: calc(794 * var(--u));
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 4px 6px 14px;
-  border-bottom: 1px solid rgba(58, 42, 26, 0.7);
+  flex-direction: column;
+  gap: calc(22 * var(--u));
+  color: var(--card-title, #def4ed);
+  font-weight: 300;
+  user-select: none;
 }
 
-.hp-orbitbox {
-  padding-top: 4px;
+/* 머리 — 왼쪽 가운데에 子音·무리, 오른쪽에 큰 자소 */
+.lp-head {
+  position: relative;
+  height: calc(165 * var(--u));
+  display: flex;
+  align-items: center;
+}
+
+#letter-char {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: calc(140 * var(--u));
+  font-weight: 300;
+  line-height: 1.18;
+}
+
+.lp-family {
+  display: flex;
+  align-items: center;
+  gap: calc(34 * var(--u));
+  font-size: calc(24 * var(--u));
+  line-height: 1.17;
+}
+
+.lp-family .lp-kind {
+  font-size: calc(20 * var(--u));
+}
+
+#letter-family {
+  display: flex;
+  gap: calc(16 * var(--u));
+}
+
+#letter-family .dim {
+  opacity: 0.4;
+}
+
+/* 본문 — 항목 두 열 + 궤도 */
+.lp-cols {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(110 * var(--u));
+  color: var(--card-rows, #a8ccff);
+  font-size: calc(18 * var(--u));
+  line-height: 1.17;
+  white-space: nowrap;
+}
+
+.lp-rows {
+  display: flex;
+  flex-direction: column;
+  gap: calc(28 * var(--u));
+}
+
+.lp-rows > div {
+  display: flex;
+  align-items: center;
+  gap: calc(16 * var(--u));
+}
+
+.lp-orbit {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(28 * var(--u));
 }
 
 #letter-orbit {
   display: block;
-  width: 140px;
-  height: 100px;
+  width: calc(168 * var(--u));
+  height: calc(168 * var(--u));
 }
 
-.hp-family {
-  margin-top: 6px;
-  font-size: 15px;
-  letter-spacing: 0.3em;
-  color: rgba(90, 70, 44, 0.45);
-}
-
-.hp-family b {
-  color: var(--hanji-ink);
-  font-weight: 500;
-}
-
-#letter-panel h2 {
-  font-size: 92px;
-  font-weight: 500;
-  line-height: 1.1;
-  color: #33231a;
-  padding-right: 14px;
-}
-
-/* 본문 — 왼쪽 큰 항목 + 오른쪽 짧은 항목 */
-.hp-cols {
-  display: flex;
-  gap: 36px;
-  margin-top: 24px;
-}
-
-.hp-rows {
-  flex: 1.55;
-  display: grid;
-  grid-template-columns: 94px 1fr;
-  align-content: start;
-  row-gap: 16px;
-  font-size: 15.5px;
-}
-
-.hp-rows.right {
-  flex: 1;
-  grid-template-columns: 86px 1fr;
-}
-
-.hp-rows dt {
-  color: var(--hanji-dim);
-  font-weight: 500;
-  letter-spacing: 0.1em;
-}
-
-.hp-rows dd {
-  color: var(--hanji-ink);
-  line-height: 1.75;
-  letter-spacing: 0.02em;
-}
-
-/* 발치 — 좌: 한문 새김, 우: 낙관(落款) */
-.hp-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-top: 28px;
-}
-
-.hp-quote {
-  font-size: 12.5px;
-  letter-spacing: 0.12em;
-  color: var(--hanji-dim);
-}
-
-.seal {
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  background: #a5291f;
-  color: #f6ecd8;
-  font-size: 21px;
-  font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: 0.1em;
-  padding: 10px 9px;
-  border-radius: 2px;
-  box-shadow: 0 2px 8px rgba(90, 20, 12, .4);
-  opacity: 0.94;
+.lp-quote {
+  /* 시안: 항목 아래 36 — 묶음 gap 22를 뺀 나머지 */
+  margin-top: calc(14 * var(--u));
+  text-align: center;
+  font-size: calc(24 * var(--u));
+  line-height: 1.2;
 }
 
 /* ---------- 좌상단 방위 표시기 (컴퍼스) ---------- */
@@ -597,25 +532,14 @@ body.reading #letter-panel {
     gap: 6px;
   }
 
-  #letter-panel {
-    width: calc(100vw - 28px);
-    padding: 20px 22px;
-  }
-
   #letter-close {
     top: 24px;
     right: 24px;
   }
 }
 
-/* 한지 종이 안 강조 */
-#letter-panel b {
-  font-weight: 500;
-  color: #17110b;
-}
-
 /* 풀이(訓民正音)·이름풀이 화면에서는 우주 UI를 감춘다 — 판본만 남긴다 */
-body:is(.reading, .divining) :is(#hanok-eave, #brand, #scale-hud, #input-wrap, #timebar, #btn-reading, #ohaeng-legend, #compass-hud) {
+body:is(.reading, .divining) :is(#brand, #scale-hud, #input-wrap, #timebar, #btn-reading, #ohaeng-legend, #compass-hud) {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.35s;
@@ -781,7 +705,7 @@ body:is(.reading, .divining) :is(#hanok-eave, #brand, #scale-hud, #input-wrap, #
   gap: calc(40 * var(--u));
   /* 시안: 글 묶음이 카드 중심보다 17.5px 위 */
   transform: translateY(calc(-17.5 * var(--u)));
-  color: #def4ed;
+  color: var(--card-title, #def4ed);
   font-weight: 300;
   user-select: none;
 }
@@ -810,7 +734,7 @@ body:is(.reading, .divining) :is(#hanok-eave, #brand, #scale-hud, #input-wrap, #
   display: flex;
   align-items: flex-start;
   gap: calc(60 * var(--u));
-  color: #a8ccff;
+  color: var(--card-rows, #a8ccff);
   font-size: calc(18 * var(--u));
   line-height: 1.17;
   white-space: nowrap;

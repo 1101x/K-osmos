@@ -20,8 +20,6 @@
 
 <body>
 
-  <div id="hanok-eave" aria-hidden="true"></div>
-
   <h1 id="brand">한글 이름 여행</h1>
 
   <!-- 좌상단 방위 표시기 — 눈금판은 동쪽을, 바늘은 북쪽을 따로 따라 돌고, 글자는 캔버스에 찍는다 -->
@@ -107,30 +105,32 @@
     </div>
   </footer>
 
-  <!-- 행성 클릭 → 자소 레터링 · 훈민정음 한지 UI -->
+  <!-- 행성 클릭 → 자소 풀이 카드 (피그마 card_jaso, 틀은 src/graphic/card_jaso_frame.svg) -->
   <div id="letter-overlay" class="hidden">
     <div id="letter-stage"></div>
 
     <button id="letter-close" aria-label="close">✕</button>
 
-    <aside id="letter-panel" class="hanji">
-      <div class="hanji-rule"></div>
-      <header class="hp-head">
-        <div class="hp-orbitbox">
-          <canvas id="letter-orbit" width="280" height="200"></canvas>
-          <p class="hp-family" id="letter-family"></p>
+    <aside id="letter-panel">
+      <img class="lp-frame" src="src/graphic/card_jaso_frame.svg" alt="">
+      <div class="lp-body">
+        <header class="lp-head">
+          <p class="lp-family">
+            <span class="lp-kind" id="letter-kind">子音</span>
+            <span id="letter-family"></span>
+          </p>
+          <h2 id="letter-char">—</h2>
+        </header>
+        <div class="lp-cols">
+          <dl class="lp-rows" id="letter-table"></dl>
+          <dl class="lp-rows" id="letter-table2"></dl>
+          <div class="lp-orbit">
+            <span>軌道</span>
+            <canvas id="letter-orbit" width="336" height="336"></canvas>
+          </div>
         </div>
-        <h2 id="letter-char">—</h2>
-      </header>
-      <div class="hp-cols">
-        <dl class="hp-rows" id="letter-table"></dl>
-        <dl class="hp-rows right" id="letter-table2"></dl>
+        <p class="lp-quote" id="letter-quote"></p>
       </div>
-      <footer class="hp-foot">
-        <p class="hp-quote" id="letter-quote"></p>
-        <div class="seal">訓民<br>正音</div>
-      </footer>
-      <div class="hanji-rule-bottom"></div>
     </aside>
   </div>
 

@@ -12,7 +12,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 ═════════════════════════════════════════════════════════════ */
 import {
   JAMO, EL, CODA_PARTS, decompose,
-  CURVE, FAMKO, TWIN, VSEQ, YANG, YIN, SAMH, VOWEL_EL,
+  CURVE, FAMKO, TWIN, VSEQ, YANG, YIN, SAMH, VOWEL_EL, VBASE, VFIRST, VSECOND,
   jejaText, FLIP_TWICE,
   eqText, curveTurns, nameReading, OHBANG_KO,
 } from './codebook.js';
@@ -1557,36 +1557,34 @@ function letterInit() {
 
 }
 
-/* ── 한지 풀이 — 가로 판형 카드 데이터 ───────────────────────
-   왼쪽 열은 큰 항목, 오른쪽 열은 짧은 항목, 性格은 여러 줄 풀이 */
+/* ── 자소 풀이 카드 데이터 ───────────────────────────────────
+   시안(card_jaso) 틀: 항목 3 + 3 두 열, 궤도 도형, 맺음 한 문장 */
 const RULE_KO = { '象形 基本字': '기본자', '加畫字': '가획자', '各自竝書': '병서자', '異體字': '이체자' };
-const VIRTUE_KO = ['어질 인', '예절 례', '믿을 신', '의로울 의', '슬기 지'];
 const FAMILY = [['ㄱ', 'ㅋ', 'ㄲ'], ['ㄴ', 'ㄷ', 'ㅌ', 'ㄹ', 'ㄸ'], ['ㅁ', 'ㅂ', 'ㅍ', 'ㅃ'], ['ㅅ', 'ㅈ', 'ㅊ', 'ㅆ', 'ㅉ'], ['ㅇ', 'ㅎ']];
 const ENERGY_KO = [
-  ['봄날의 나무처럼 곧게 뻗어 자라는 기운이니', '성장의 에너지를 갖는다'],
-  ['여름 불꽃처럼 위로 타오르는 기운이니', '피어나는 에너지를 갖는다'],
-  ['한가운데서 두루 품어 안는 기운이니', '아우르는 에너지를 갖는다'],
-  ['가을 쇠붙이처럼 거두어 굳히는 기운이니', '여무는 에너지를 갖는다'],
-  ['겨울 물처럼 낮은 곳으로 스며드는 기운이니', '고요히 모이는 에너지를 갖는다'],
+  '봄날의 나무처럼 곧게 뻗어 자라는 기운이니 성장의 에너지를 갖는다.',
+  '여름 불꽃처럼 위로 타오르는 기운이니 피어나는 에너지를 갖는다.',
+  '한가운데서 두루 품어 안는 기운이니 아우르는 에너지를 갖는다.',
+  '가을 쇠붙이처럼 거두어 굳히는 기운이니 여무는 에너지를 갖는다.',
+  '겨울 물처럼 낮은 곳으로 스며드는 기운이니 고요히 모이는 에너지를 갖는다.',
 ];
 
 function consData(jm) {
   const E = EL[jm.el], jj = jejaText(jm.glyph);
   return {
+    kind: '子音',
     family: FAMILY[jm.el],
     left: [
       ['五音', `${jj.soundKo} ${RULE_KO[jj.rule] || jj.rule}`],
-      ['季節', E.seasonKo],
-      ['方位', `${E.dirKo}쪽`],
-      ['方位神', E.godKo],
+      ['五行', `${E.name} ${E.ko}`],
+      ['方位', E.dirKo === '가운데' ? E.dirKo : `${E.dirKo}쪽`],
     ],
     right: [
-      ['五行', `${E.name} ${E.ko}`],
       ['五方色', OHBANG_KO[jm.el]],
-      ['德性', VIRTUE_KO[jm.el]],
+      ['五方神', E.godKo],
+      ['季節', E.seasonKo],
     ],
-    persona: [`${E.shapeKo}에서 형태를 얻었다`, ...ENERGY_KO[jm.el]],
-    quote: E.shape,
+    quote: ENERGY_KO[jm.el],
   };
 }
 
@@ -1597,41 +1595,41 @@ function yinyang(v) {
       : ['中', '음도 양도 아닌 소리'];
 }
 
+/* 중성 제자 — 기본자 ㅡㅣ · 초출자 ㅗㅏㅜㅓ · 재출자 ㅛㅑㅠㅕ · 나머지 합용자 */
+const vowelRule = (v) =>
+  VBASE.has(v) ? '기본자' : VFIRST.has(v) ? '초출자' : VSECOND.has(v) ? '재출자' : '합용자';
+
 function vowelData(jm) {
   const tail = YANG.has(jm.glyph) ? '확산하는 양의 에너지를 갖는다'
     : YIN.has(jm.glyph) ? '수렴하는 음의 에너지를 갖는다'
       : '어느 쪽에도 치우치지 않는 中의 에너지를 갖는다';
   return {
+    kind: '母音',
     family: jm.seq.map(x => ['ㆍ', 'ㅡ', 'ㅣ'][x]),
     left: [
       ['三才', jm.seq.map(x => SAMH[x]).join(', ')],
-      ['陰陽', yinyang(jm.glyph)[1]],
+      ['陰陽', yinyang(jm.glyph).join(' ')],
+      ['制字', vowelRule(jm.glyph)],
     ],
     right: [
       ['天', `위성 ${jm.moons}`],
       ['地', `가로띠 ${jm.beltH}`],
       ['人', `세로띠 ${jm.beltV}`],
     ],
-    persona: [
-      '중성은 음양과 삼재를 따른다',
-      '둥근 ㆍ는 하늘, 평평한 ㅡ는 땅, 곧게 선 ㅣ는 사람으로',
-      '셋이 어우러진 형상을 이루며',
-      tail,
-    ],
-    quote: '取象於天地人',
+    quote: `둥근 ㆍ는 하늘, 평평한 ㅡ는 땅, 곧게 선 ㅣ는 사람으로 셋이 어우러진 형상을 이루며 ${tail}.`,
   };
 }
 
-/* 궤도 도형 — 종이 위에 먹선으로 다시 그린 자소 궤도.
+/* 궤도 도형 — 정사각 캔버스(2배 해상도)에 카드 오행 색으로 그린 자소 궤도.
    자음은 제 수식 곡선(병서는 살짝 돌려 한 벌 더), 모음은 원 + 띠 + 위성 */
-function drawOrbitThumb(jm) {
+function drawOrbitThumb(jm, color) {
   const cv = document.getElementById('letter-orbit');
   const ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
   ctx.clearRect(0, 0, W, H);
-  ctx.strokeStyle = 'rgba(43, 30, 18, 0.8)';
-  ctx.fillStyle = 'rgba(43, 30, 18, 0.8)';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2.5;
   const cx = W / 2, cy = H / 2;
   const trace = (P) => {
     ctx.beginPath();
@@ -1639,7 +1637,8 @@ function drawOrbitThumb(jm) {
     ctx.stroke();
   };
   if (jm.type === 'vowel') {
-    const R = H * 0.3;
+    /* 가장 바깥 띠(2.4R)가 캔버스 반폭 안에 들도록 */
+    const R = Math.min(W, H) * 0.2;
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.stroke();
@@ -1671,6 +1670,56 @@ function drawOrbitThumb(jm) {
   }
 }
 
+/* ── 카드 오행 색 — 피그마 colorSystem(23:3914)의 여섯 변형 ─────────
+   line: 테두리·언덕·구름 / hill: 언덕만 달리 쓸 때 / top: 배경 그라디언트 윗색(아랫색 #050212는 공통) /
+   title: 자소·이름·문장·궤도 선, card_name에서는 구름 그라디언트 끝색도 / rows: 항목 글 */
+const CARD_PAL = [
+  { line: '#D1D3FF', top: '#08173C', title: '#DEF4ED', rows: '#A8CCFF' },   /* 木 */
+  { line: '#FFD1D9', top: '#33030C', title: '#F4DEDE', rows: '#FFA8A8' },   /* 火 */
+  { line: '#FFFAD1', top: '#2E1C03', title: '#F4F4DE', rows: '#FFE8A8' },   /* 土 */
+  { line: '#FFFBF2', top: '#2C2C2C', title: '#FBFBEC', rows: '#FAF6E9' },   /* 金 */
+  { line: '#E5FCFD', top: '#00081B', title: '#E8F9F4', rows: '#DAF2EB' },   /* 水 */
+  /* 모음(24:5648) — 무채색. 시안에서 언덕만 水 색을 쓰므로 hill을 따로 둔다 */
+  { line: '#F0F0F0', hill: '#E5FCFD', top: '#282828', title: '#B4B4B4', rows: '#F0F0F0' },
+];
+const PAL_VOWEL = 5;
+const FRAME_NAME = 'src/graphic/card_frame.svg';
+const FRAME_JASO = 'src/graphic/card_jaso_frame.svg';
+const letterPanelEl = document.getElementById('letter-panel');
+const letterFrameEl = letterPanelEl.querySelector('.lp-frame');
+const readingCardEl = document.querySelector('#reading-overlay .rp-card');
+const readingFrameEl = readingCardEl.querySelector('.rp-frame');
+
+/* 틀 SVG는 木 색 한 장뿐 — 그 역할 색만 바꿔 Blob URL로 꽂는다.
+   card_name의 아치 띠(#393B59)는 자소 카드 언덕과 같은 결로 선색 20%로 푼다 */
+const frameText = {};
+const loadFrame = (url) => (frameText[url] ||= fetch(url)
+  .then(r => r.ok ? r.text() : Promise.reject(r.status))
+  .catch(e => { delete frameText[url]; throw e; }));
+/* 자소 틀이 477KB라 열고 나서 받으면 첫 장이 木 색으로 잠깐 떠 있는다 — 미리 받아 둔다 */
+for (const u of [FRAME_NAME, FRAME_JASO]) loadFrame(u).catch(() => { });
+
+/* 글 색은 틀이 준비된 뒤에 함께 바꾼다 — 못 받으면 파일 그대로인 木으로 되돌려 짝을 맞춘다.
+   실제로 입힌 팔레트를 돌려주므로, 궤도 선도 그 색으로 그리면 된다 */
+async function applyCardPalette(host, img, url, pal) {
+  let svg = null;
+  try { svg = await loadFrame(url); }
+  catch { pal = CARD_PAL[0]; }
+  host.style.setProperty('--card-title', pal.title);
+  host.style.setProperty('--card-rows', pal.rows);
+  if (svg) {
+    const tinted = svg
+      .replace(/fill="#D1D3FF" fill-opacity="0.2"/gi, `fill="${pal.hill || pal.line}" fill-opacity="0.2"`)   /* 언덕 먼저 */
+      .replace(/#D1D3FF/gi, pal.line)
+      .replace(/#08173C/gi, pal.top)
+      .replace(/#DEF4ED/gi, pal.title)
+      .replace(/fill="#393B59"/gi, `fill="${pal.line}" fill-opacity="0.2"`);
+    if (img.dataset.blob) URL.revokeObjectURL(img.dataset.blob);
+    img.src = img.dataset.blob = URL.createObjectURL(new Blob([tinted], { type: 'image/svg+xml' }));
+  }
+  return pal;
+}
+
 /* jm = 자소 궤도 정보, sys = 그 자소가 속한 음절 계 */
 function openLetter(jm, sys) {
   if (!Lscene) letterInit();
@@ -1698,13 +1747,15 @@ function openLetter(jm, sys) {
   const D = isV ? vowelData(jm) : consData(jm);
 
   document.getElementById('letter-char').textContent = jm.glyph;
+  document.getElementById('letter-kind').textContent = D.kind;
+  /* 자음은 같은 오행 무리 중 제 자리만 밝게, 모음은 제 획(天地人)이라 모두 밝게 */
   document.getElementById('letter-family').innerHTML =
-    D.family.map(g => (g === jm.glyph ? `<b>${g}</b>` : g)).join(' ');
-  drawOrbitThumb(jm);
+    D.family.map(g => `<span${!isV && g !== jm.glyph ? ' class="dim"' : ''}>${g}</span>`).join('');
+  applyCardPalette(letterPanelEl, letterFrameEl, FRAME_JASO, CARD_PAL[isV ? PAL_VOWEL : jm.el])
+    .then(p => drawOrbitThumb(jm, p.title));
 
-  const rowsHtml = (rows) => rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  document.getElementById('letter-table').innerHTML =
-    rowsHtml(D.left) + `<dt>性格</dt><dd>${D.persona.join('<br>')}</dd>`;
+  const rowsHtml = (rows) => rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  document.getElementById('letter-table').innerHTML = rowsHtml(D.left);
   document.getElementById('letter-table2').innerHTML = rowsHtml(D.right);
   document.getElementById('letter-quote').textContent = D.quote;
 
@@ -1756,6 +1807,9 @@ document.getElementById('ohaeng-cols').innerHTML = EL.map((e, i) => {
 function openReading() {
   const R = nameReading(readingName());
   if (!R) return;
+
+  /* 카드 색 = 이름에서 가장 많은 오행 (같으면 木火土金水 차례로 앞선 것) */
+  applyCardPalette(readingCardEl, readingFrameEl, FRAME_NAME, CARD_PAL[R.el.indexOf(Math.max(...R.el))]);
 
   /* 집계 — 음양은 있는 것만, 오행도 있는 것만 */
   const counts = [];

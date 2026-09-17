@@ -138,7 +138,7 @@ export const SAMH = ['天', '地', '人'];
    모음은 오행이 아니라 음양을 따른다 — EL과 같은 칸을 가진 여섯 번째 항목 격.
    달 텍스처를 쓰며 위성도 같은 재질을 공유한다 */
 export const VOWEL_EL = {
-  h: '中', accent: 0x9a9a9aff, ko: '중성', name: '달',
+  h: '中', accent: 0x9a9a9a, ko: '중성', name: '달',
   col: '#3d3d3dff', trail: '#505050ff',
   tex: '2k_moon.jpg', tint: '#505050ff', glow: 0.08, churn: 0.35, latin: 'MOON',
   sound: '中聲', soundKo: '가운뎃소리', shape: '取象於天地人', shapeKo: '하늘·땅·사람에서 꼴을 취함',
