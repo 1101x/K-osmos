@@ -1763,7 +1763,7 @@ function openReading() {
   if (R.yin) counts.push(`陰 ${R.yin}`);
   if (R.mid) counts.push(`中 ${R.mid}`);
   R.el.forEach((n, i) => { if (n) counts.push(`${EL[i].h} ${n}`); });
-  document.getElementById('reading-counts').textContent = counts.join('  ');
+  document.getElementById('reading-counts').innerHTML = counts.map(c => `<span>${c}</span>`).join('');
 
   document.getElementById('reading-name').textContent = R.name;
   document.getElementById('reading-traits').textContent = R.traits.join(' ');

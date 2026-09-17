@@ -249,7 +249,7 @@ export function nameReading(name) {
   const E = EL[lack];
   return {
     name, el, yang, yin, mid, traits, lack,
-    lackLine: `${E.h} ${E.name}의 기운이 ${el[lack] === 0 ? '없으니' : '가장 옅으니'}`,
+    lackLine: `${E.name}(${E.h})의 기운이 부족하니`,
     advice: [
       /* 土는 방위가 '가운데'라 '쪽'을 붙이면 말이 어색하다 */
       E.dirKo === '가운데' ? '한가운데가 길하며' : `${E.dirKo}쪽이 길하며`,
