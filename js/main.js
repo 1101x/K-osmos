@@ -1808,8 +1808,8 @@ function openReading() {
   const R = nameReading(readingName());
   if (!R) return;
 
-  /* 카드 색 = 이름에서 가장 많은 오행 (같으면 木火土金水 차례로 앞선 것) */
-  applyCardPalette(readingCardEl, readingFrameEl, FRAME_NAME, CARD_PAL[R.el.indexOf(Math.max(...R.el))]);
+  /* 카드 색 = 用神, 곧 이름에 부족한 오행 — 아래 풀이 문구와 같은 것을 가리킨다 */
+  applyCardPalette(readingCardEl, readingFrameEl, FRAME_NAME, CARD_PAL[R.lack]);
 
   /* 집계 — 음양은 있는 것만, 오행도 있는 것만 */
   const counts = [];
