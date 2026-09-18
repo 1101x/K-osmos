@@ -13,7 +13,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import {
   JAMO, EL, CODA_PARTS, decompose,
   CURVE, FAMKO, TWIN, VSEQ, YANG, YIN, SAMH, VOWEL_EL, VBASE, VFIRST, VSECOND,
-  jejaText, FLIP_TWICE,
+  jejaText,
   eqText, curveTurns, nameReading, OHBANG_KO,
 } from './codebook.js';
 
@@ -89,15 +89,10 @@ function arcResample(pts) {
   }
   return { pts: out, len };
 }
-function consDir(g, el, dir) {
-  if (el === 1 || el === 3) dir = -dir;
-  if (FLIP_TWICE.has(TWIN[g] || g)) dir = -dir;
-  return dir;
-}
-/* 자음 궤도 — kind: '초성' | '종성' 자음 크기 행성 크기*/
+/* 자음 궤도 — kind: '초성' | '종성' 자음 크기 행성 크기.
+   방향은 음절이 정한다(제 오행으로 뒤집지 않는다) */
 function consOrbit(g, dir, kind, R) {
   const [el, , tense] = JAMO[g] || [4, 0, 0];
-  dir = consDir(g, el, dir);
   const rs = arcResample(reindex(rotate2(jamoCurve(g, R0), R() * Math.PI * 2), 0, dir));
   const C = CURVE[TWIN[g] || g];
   const baseSize = 4;
@@ -133,10 +128,11 @@ function systemFor(ch) {
   if (!d) return null;
   const R = rng(ch.charCodeAt(0) * 2654435761);
   const v = d.vowel;
-  /* 초성 방향 = 모음 방향(양성 시계 · 음성 반시계 · 중성 랜덤), 종성 = 반대 */
+  /* 한 음절은 한 손으로 돈다 — 모음의 음양이 초·중·종성의 방향을 함께 정한다
+     (양성 시계 · 음성 반시계 · 중성 ㅡㅣㅢ는 음절마다 랜덤) */
   const vDir = YANG.has(v) ? 1 : YIN.has(v) ? -1 : (R() < 0.5 ? 1 : -1);
   const orbits = [consOrbit(d.onset, vDir, '초성', R), vowelOrbit(v, vDir)];
-  if (d.coda) (CODA_PARTS[d.coda] || [d.coda]).forEach(g => orbits.push(consOrbit(g, -vDir, '종성', R)));
+  if (d.coda) (CODA_PARTS[d.coda] || [d.coda]).forEach(g => orbits.push(consOrbit(g, vDir, '종성', R)));
   return { char: ch, el: (JAMO[d.onset] || [4, 0, 0])[0], onset: d.onset, vowel: v, coda: d.coda, orbits };
 }
 
@@ -668,6 +664,25 @@ function makeGlyphBillboard(o, radius) {
   return sp;
 }
 
+/* 오행 이모지 — 자음 행성이 위성처럼 하나 거느린다. 우하단 오행표와 같은 글리프 */
+const EL_EMOJI = ['🌲', '🔥', '⛰️', '💎', '🌊'];
+const emojiTexCache = {};
+const emojiTexture = (el) => (emojiTexCache[el] ||= glyphCanvasTexture(128, 128, (ctx) => {
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.font = '96px "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Emoji", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(EL_EMOJI[el] || EL_EMOJI[4], 64, 68);
+}));
+function emojiMoon(el, radius, orbitR) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: emojiTexture(el), transparent: true, depthWrite: false,
+  }));
+  sp.scale.setScalar(radius * 1.6);
+  sp.position.set(orbitR, 0, 0);
+  return sp;
+}
+
 /* 별밭에 심는 자모 — 단자음 14 · 단모음 10 */
 const SEED_JAMO = [
   'ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ',
@@ -741,6 +756,7 @@ function makeGlowSprite(size) {
 /* 행성 재질 사양 = 오행 표(EL) 그 자체. 자음은 오행, 모음은 달 */
 const planetSpec = (o) => (o.type === 'vowel' ? VOWEL_EL : EL[o.el]);
 const MAX_ORBIT = 55;         /* 가장 큰 궤적 반경 (행성·항성이 상대적으로 커 보이게 축소) 궤도 지름 */
+const SYL_GAP = 0.55;         /* 음절 띠 간격 — 첫 음절 1배, 다음 1.55배… 정/현/주가 갈라 보이게 */
 const NPT = NS;               /* 궤적 샘플 수 = v13 궤도 샘플 수 */
 const REVEAL_DUR = 6;         /* 궤도 작도 6초 */
 
@@ -880,24 +896,6 @@ function makeConsRing(group, radius, o) {
   makeBelt(group, radius, 1.5, 2.3, -Math.PI / 2, 0, o.col);
 }
 
-/* 행성 거리 랜덤 배치 — 겹치지 않게 (첫 계는 원점) 음절 거리 */
-function placeSystems(n, k = 1) {
-  const MIN_SEP = MAX_ORBIT * 2 * k;
-  const pts = [new THREE.Vector3(0, 0, 0)];
-  for (let i = 1; i < n; i++) {
-    let p, tries = 0;
-    do {
-      const r = (MAX_ORBIT + Math.random() * 150) * k;
-      const th = Math.random() * Math.PI * 2;
-      const y = gauss() * 55 * k;
-      p = new THREE.Vector3(r * Math.cos(th), y, r * Math.sin(th));
-      tries++;
-    } while (pts.some(q => q.distanceTo(p) < MIN_SEP) && tries < 300);
-    pts.push(p);
-  }
-  return pts;
-}
-
 /* 음절 궤적면 기울임 — 세로축 기준 노드선을 n등분 + 랜덤 경사
    (y=0에 겹치던 궤적을 음절마다 다른 평면으로 분산) */
 function syllableTilts(n) {
@@ -920,9 +918,11 @@ const compassGeo = new THREE.BufferGeometry().setFromPoints([
   new THREE.Vector3(-COMPASS_L, 0, 0), new THREE.Vector3(COMPASS_L, 0, 0),
   new THREE.Vector3(0, 0, -COMPASS_L), new THREE.Vector3(0, 0, COMPASS_L),
 ]);
-function makeCompass(group) {
+function makeCompass(group, k = 1) {
   const mat = new THREE.LineBasicMaterial({ color: 0xe9dfc8, transparent: true, opacity: 0.07 });
-  group.add(new THREE.LineSegments(compassGeo, mat));
+  const ls = new THREE.LineSegments(compassGeo, mat);
+  ls.scale.setScalar(k);   /* 바깥 음절 띠까지 뻗는다 */
+  group.add(ls);
   return { mat };
 }
 
@@ -1022,56 +1022,61 @@ function buildCluster(b, wi) {
   wordEntry.beacon = beacon;
 
   const beaconLabel = makeLabelEl(
-    `<span class="ring-icon" style="color:#cfd8ff"></span><span class="name">${b.name} 星團</span>`,
+    `<span class="name">${b.name} 성단</span>`,
     null, () => flyToWord(wi));
   beaconLabel.element.classList.add('cluster-label');
   beaconLabel.position.copy(cpos);
   cGroup.add(beaconLabel);
   wordEntry.beaconLabel = beaconLabel;
 
-  /* --- 이름 안의 음절 = 계 (성단 중심 주변에 배치 — 기존 대비 2배 거리) --- */
-  const sylPos = placeSystems(b.sylls.length, 2);
+  /* --- 이름 하나 = 성단 하나. 음절은 안에서 밖으로 궤도 띠를 나눠 갖는다 --- */
+  const sysIndex = systems.length;
+  const pos = cpos.clone();
+  const group = new THREE.Group();
+  group.position.copy(pos);
+
+  /* 음절 띠 배율 — 안쪽 음절부터 SYL_GAP 씩 반지름을 키워 정/현/주가 갈라 보이게 한다 */
+  const rOf = (si) => 1 + si * SYL_GAP;
+  const rMax = rOf(b.sylls.length - 1);
+
+  /* --- 항성 = 노란 발광만 (자소 그래픽 없음) --- */
+  const star = new THREE.Group();
+  star.add(makeGlowSprite(26));
+  group.add(star);
+
+  const sunLabel = makeLabelEl(
+    `<span class="name">${b.name} 성단</span>`,
+    null, () => flyToSystem(sysIndex));
+  sunLabel.element.classList.add('sun-label');
+  group.add(sunLabel);
+
+  /* --- 오방 컴퍼스 (02 geometry_v3 UI) --- */
+  const compass = makeCompass(group, rMax);
+
+  /* --- 성단 뷰 마커: 글로우 + 이름의 모든 자소 --- */
+  const marker = new THREE.Group();
+  marker.add(makeGlowSprite(560));
+  const allOrbits = b.sylls.flatMap(sd => sd.orbits);
+  allOrbits.forEach((o, j) => {
+    /* 성단 뷰 마커는 계 뷰 확대와 무관하게 제 크기를 지킨다 */
+    const mr = 46 * (o.sz / 3);
+    const mp = new THREE.Group();
+    mp.add(makeGlyphBillboard(o, mr));
+    if (o.type === 'vowel') makeSaturnRing(mp, mr, o);
+    else { makeConsRing(mp, mr, o); mp.add(emojiMoon(o.el, mr, mr * 3.1)); }
+    const a = j / allOrbits.length * Math.PI * 2;
+    mp.position.set(Math.cos(a) * 210, 0, Math.sin(a) * 210);
+    marker.add(mp);
+  });
+  marker.scale.setScalar(0.001);
+  marker.visible = false;
+  group.add(marker);
+
+  /* --- 자소 → 기울인 궤도면 + 행성. 기울기는 음절 안에서 나누고, 크기는 음절 띠가 정한다 --- */
+  const jamos = [];
   b.sylls.forEach((sd, si) => {
-    const sysIndex = systems.length;
-    const pos = cpos.clone().add(sylPos[si]);
-    const group = new THREE.Group();
-    group.position.copy(pos);
-
-    /* --- 항성 = 노란 발광만 (자소 그래픽 없음) --- */
-    const star = new THREE.Group();
-    star.add(makeGlowSprite(26));
-    group.add(star);
-
-    const sunLabel = makeLabelEl(
-      `<span class="ring-icon" style="color:#d8b551"></span><span class="name">${sd.char}계</span>`,
-      null, () => flyToSystem(sysIndex));
-    sunLabel.element.classList.add('sun-label');
-    group.add(sunLabel);
-
-    /* --- 오방 컴퍼스 (02 geometry_v3 UI) --- */
-    const compass = makeCompass(group);
-
-    /* --- 성단 뷰 계 마커: 글로우 + 자소 행성 --- */
-    const marker = new THREE.Group();
-    marker.add(makeGlowSprite(560));
-    sd.orbits.forEach((o, j) => {
-      /* 성단 뷰 마커는 계 뷰 확대와 무관하게 제 크기를 지킨다 */
-      const mr = 46 * (o.sz / 3);
-      const mp = new THREE.Group();
-      mp.add(makeGlyphBillboard(o, mr));
-      if (o.type === 'vowel') makeSaturnRing(mp, mr, o);
-      else makeConsRing(mp, mr, o);
-      const a = j / sd.orbits.length * Math.PI * 2;
-      mp.position.set(Math.cos(a) * 210, 0, Math.sin(a) * 210);
-      marker.add(mp);
-    });
-    marker.scale.setScalar(0.001);
-    marker.visible = false;
-    group.add(marker);
-
-    /* --- 자소 → 기울인 궤도면 + 행성 (180°를 자소 수로 나눠 랜덤 배치) --- */
     const tilts = syllableTilts(sd.orbits.length);
-    const jamos = [];
+    const SC = SCALE * rOf(si);
     sd.orbits.forEach((o, j) => {
       const jGroup = new THREE.Group();
       jGroup.quaternion.copy(tilts[j]);
@@ -1080,7 +1085,7 @@ function buildCluster(b, wi) {
       /* 궤적 (v13 곡선 → 기울인 평면) */
       const trajArr = new Float32Array((NPT + 1) * 3);
       o.pts.forEach(([x, y], k) => {
-        trajArr[k * 3] = x * SCALE; trajArr[k * 3 + 1] = 0; trajArr[k * 3 + 2] = y * SCALE;
+        trajArr[k * 3] = x * SC; trajArr[k * 3 + 1] = 0; trajArr[k * 3 + 2] = y * SC;
       });
       const trajGeo = new THREE.BufferGeometry();
       trajGeo.setAttribute('position', new THREE.BufferAttribute(trajArr, 3));
@@ -1111,7 +1116,7 @@ function buildCluster(b, wi) {
         twinQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 5 * Math.PI / 180);
         const twinArr = new Float32Array((NPT + 1) * 3);
         o.pts.forEach(([x, y], k) => {
-          const v = new THREE.Vector3(x * SCALE, 0, y * SCALE).applyQuaternion(twinQ);
+          const v = new THREE.Vector3(x * SC, 0, y * SC).applyQuaternion(twinQ);
           twinArr[k * 3] = v.x; twinArr[k * 3 + 1] = v.y; twinArr[k * 3 + 2] = v.z;
         });
         const tGeo = new THREE.BufferGeometry();
@@ -1184,13 +1189,17 @@ function buildCluster(b, wi) {
         }
       } else {
         makeConsRing(planet, radius, o);
+        /* 오행 이모지 — 모음의 위성처럼 하나가 돈다 */
+        moonGrp = new THREE.Group();
+        moonGrp.add(emojiMoon(o.el, radius, radius * 3.1));
+        planet.add(moonGrp);
       }
       jGroup.add(planet);
 
       /* 띠·위성이 닿는 가장 바깥 — 반짝이는 이 밖에서만 인다 */
       const auraR = radius * (o.type === 'vowel'
         ? Math.max(2.4 + (Math.max(o.beltH | 0, o.beltV | 0) - 1) * 0.5, o.moons ? 3.4 : 0, 2.4)
-        : 2.3);
+        : 3.4);
 
       const planetLabel = makeLabelEl(
         `<span class="ring-icon"></span><span class="name">${o.glyph}</span>`,
@@ -1198,22 +1207,20 @@ function buildCluster(b, wi) {
       planet.add(planetLabel);
 
       jamos.push({
-        ...o, jGroup, planet, planetLabel, moonGrp, traj, trajMat, glows, auraR,
+        ...o, sc: SC, jGroup, planet, planetLabel, moonGrp, traj, trajMat, glows, auraR,
         twinLines, twinQ,
         debris, dust, debrisBig, dustBig, elC, trailC,
         /* age0 = 작도 시작 시각(음절·자소 순서대로 시차). 되감기 기준점 */
         age: -(si * 0.6 + j * 0.4), age0: -(si * 0.6 + j * 0.4), tc: 0,
       });
     });
+  });
 
-    cGroup.add(group);
-    wordEntry.systems.push(sysIndex);
-    systems.push({
-      index: sysIndex, wordIndex: wi, clusterIndex: wi, sylIndex: si,
-      char: sd.char, word: b.name, el: sd.el,
-      onset: sd.onset, vowel: sd.vowel, coda: sd.coda,
-      pos, group, sunLabel, compass, marker, jamos, SCALE, sysF: 1,
-    });
+  cGroup.add(group);
+  wordEntry.systems.push(sysIndex);
+  systems.push({
+    index: sysIndex, wordIndex: wi, clusterIndex: wi,
+    word: b.name, pos, group, sunLabel, compass, marker, jamos, rMax, sysF: 1,
   });
 
   return wordEntry;
@@ -1306,7 +1313,7 @@ function nearestCluster() {
 function flyToSystem(i) {
   const s = systems[i];
   if (!s) return;
-  flyTo(() => s.pos.clone(), 90, 1.8);
+  flyTo(() => s.pos.clone(), 90 * s.rMax, 1.8);
 }
 function flyToWord(wi) {
   const w = words[wi];
@@ -1411,8 +1418,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   downXY = null;
   if (moved > 5) return;
   if (!letterOverlayEl.classList.contains('hidden')) return;
-  const { d } = nearestSystem();
-  if (d > 700) return;
+  const { sys, d } = nearestSystem();
+  if (!sys || d > 700 * sys.rMax) return;
   pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObjects(systems.flatMap(s => s.jamos.map(y => y.planet)), true);
@@ -1426,8 +1433,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 /* 행성 호버 → 커서 손가락으로 변경 */
 renderer.domElement.addEventListener('pointermove', (e) => {
   if (letterOverlayEl && !letterOverlayEl.classList.contains('hidden')) return;
-  const { d } = nearestSystem();
-  if (d > 700) { renderer.domElement.style.cursor = 'default'; return; }
+  const { sys, d } = nearestSystem();
+  if (!sys || d > 700 * sys.rMax) { renderer.domElement.style.cursor = 'default'; return; }
   pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObjects(systems.flatMap(s => s.jamos.map(y => y.planet)), true);
@@ -1474,10 +1481,8 @@ let lastScaleName = '';
 function updateScaleHUD() {
   const { sys, d } = nearestSystem();
   const { word, d: dw } = nearestWord();
-  let name;
-  if (sys && d < 260) name = `${sys.char}계`;
-  else if (word && dw < 18000) name = `${word.word} 성단`;
-  else name = '태극 은하';
+  /* 이름 하나가 곧 성단이자 계 — 가까이서든 멀리서든 이름으로 부른다 */
+  const name = (word && dw < 18000) ? `${word.word} 성단` : '태극 은하';
   if (name !== lastScaleName) {
     lastScaleName = name;
     scaleNameEl.textContent = name;
@@ -1485,8 +1490,8 @@ function updateScaleHUD() {
   /* 이름이 여럿 심긴 우주에선 풀이 대상도 지금 다가선 성단을 따라간다 */
   if (word && word.word !== lastReadingName) syncReadingButton();
 
-  /* 계(界) 뷰에서, 행성 확대 오버레이가 안 열렸을 때만 방위 표시기 노출 */
-  const isSystemView = (sys && d < 260) && letterOverlayEl.classList.contains('hidden');
+  /* 성단 안까지 들어왔고, 행성 확대 오버레이가 안 열렸을 때만 방위 표시기 노출 */
+  const isSystemView = (sys && d < 260 * sys.rMax) && letterOverlayEl.classList.contains('hidden');
   compassHudEl.classList.toggle('hidden', !isSystemView);
 }
 
@@ -1768,7 +1773,7 @@ function closeLetter() {
   letterOverlayEl.classList.add('hidden');
   document.body.classList.remove('reading');
   const { sys } = nearestSystem();
-  if (sys) flyTo(() => sys.pos.clone(), 90, 1.8);
+  if (sys) flyTo(() => sys.pos.clone(), 90 * sys.rMax, 1.8);
 }
 document.getElementById('letter-close').addEventListener('click', closeLetter);
 
@@ -1798,7 +1803,6 @@ function syncReadingButton() {
 }
 
 /* 우하단 자음 오행표 — JAMO에서 된소리를 뺀 기본 자음을 오행별로 세운다 */
-const EL_EMOJI = ['🌲', '🔥', '⛰️', '💎', '🌊'];
 document.getElementById('ohaeng-cols').innerHTML = EL.map((e, i) => {
   const jamos = Object.keys(JAMO).filter(g => JAMO[g][0] === i && !JAMO[g][2]);
   return `<div class="lg-col"><span class="lg-emoji">${EL_EMOJI[i]}</span><span class="lg-hanja">${e.h}</span>${jamos.map(g => `<span>${g}</span>`).join('')}</div>`;
@@ -1972,10 +1976,11 @@ function animate() {
   /* ----- 계별 업데이트: 음절별 v8 체인 공전 + 페이드 ----- */
   for (const s of systems) {
     const dS = camera.position.distanceTo(s.pos);
-    const sysF = 1 - smooth(dS, 350, 1300);
+    /* 음절이 많은 이름일수록 계가 크다 — 페이드 거리도 그만큼 멀찍이 */
+    const k = s.rMax;
+    const sysF = 1 - smooth(dS, 350 * k, 1300 * k);
     s.sysF = sysF;
     const visible = sysF > 0.02;
-    const SC = s.SCALE;
 
     for (const y of s.jamos) {
       /* 작도 진행: reveal 6초 → 이후 연속 공전 (u = 궤도 위 위상 0~1) */
@@ -1995,7 +2000,7 @@ function animate() {
       if (visible) {
         const idx = Math.min(NPT, Math.floor(u * NPT));
         const [px, py] = y.pts[idx];
-        y.planet.position.set(px * SC, 0, py * SC);
+        y.planet.position.set(px * y.sc, 0, py * y.sc);
         /* 병서 — 두 바퀴가 한 벌이다. 홀수 바퀴는 5° 틀어진 겹궤도 쪽으로 갈아탄다
            (궤도면을 통째로 돌린 것과 같은 회전을 좌표에 걸어 자리만 옮긴다) */
         if (y.twinQ && Math.floor(y.tc) % 2 === 1) y.planet.position.applyQuaternion(y.twinQ);
@@ -2106,7 +2111,7 @@ function animate() {
     s.compass.mat.opacity = 0.07 * sysF;
 
     /* 성단 뷰 계 마커 — 계에 가까우면 숨기고 성단 거리에서 등장 */
-    const mF = smooth(dS, 500, 2400) * (clusters[s.clusterIndex] ? clusters[s.clusterIndex].cF : 0);
+    const mF = smooth(dS, 500 * k, 2400 * k) * (clusters[s.clusterIndex] ? clusters[s.clusterIndex].cF : 0);
     s.marker.visible = mF > 0.02;
     if (s.marker.visible) {
       s.marker.scale.setScalar(mF);
