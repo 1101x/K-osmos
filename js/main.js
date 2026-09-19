@@ -167,6 +167,9 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.06;
 controls.minDistance = 4;
 controls.maxDistance = 90000;
+/* 성단(≈190) ↔ 은하(20000)는 105배 차 — 기본 배속이면 휠 91노치라 멀게 느껴진다.
+   은하는 20000에서 화면 폭에 꽉 차 더 당길 수 없으니 거리 대신 배속을 올린다 */
+controls.zoomSpeed = 2.4;
 
 scene.add(new THREE.AmbientLight(0xfff4e0, 0.32));
 /* 계마다 점광원을 두면 광원 수가 음절 수만큼 늘어난다 → 전역 평행광 하나로 대신한다 */
