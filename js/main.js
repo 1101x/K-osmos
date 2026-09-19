@@ -474,8 +474,8 @@ function buildSinsoo(img, spec) {
       const joint = k >= pts.length;
       return {
         x: x + gauss() * S, y: y + gauss() * S, z: gauss() * 26,
-        color: joint ? 0xfff4d8 : (Math.random() < 0.12 ? 0xffffff : 0xcfd9ff),
-        size: joint ? 1700 + Math.random() * 800 : 380 + Math.pow(Math.random(), 2.0) * 950,
+        color: joint ? 0xfff4d8 : (Math.random() < 0.3 ? 0xffffff : 0xcfd9ff),
+        size: joint ? 2000 + Math.random() * 800 : 380 + Math.pow(Math.random(), 2.0) * 950,
       };
     },
   });
@@ -529,7 +529,7 @@ function buildSinsoo(img, spec) {
     map: STAR_SPRITE, transparent: true, depthWrite: false,
     blending: THREE.AdditiveBlending, color: 0xffffff,
   }));
-  spark.scale.setScalar(SINSOO_SIZE * 0.06);
+  spark.scale.setScalar(SINSOO_SIZE * 0.04);
   group.add(spark);
 
   group.position.copy(spec.axis).multiplyScalar(SINSOO_DIST);
@@ -928,7 +928,7 @@ function makeCompass(group, k = 1) {
 
 let clusters = [];         /* 이름 성단 — {index,pos,word,deco,beacon,beaconLabel,cF,systems:[i]} */
 let words = [];            /* 이름 성단 참조 (동일) */
-let systems = [];          /* 음절 계 — {index,wordIndex,clusterIndex,char,pos,group,star,jamos:[...]} */
+let systems = [];          /* 이름 계 — {index,wordIndex,clusterIndex,word,pos,group,sunLabel,compass,marker,jamos:[...],rMax,sysF} */
 let universe = null;       /* 모든 성단·계를 담는 그룹 */
 
 function disposeNode(root) {
@@ -1041,7 +1041,7 @@ function buildCluster(b, wi) {
 
   /* --- 항성 = 노란 발광만 (자소 그래픽 없음) --- */
   const star = new THREE.Group();
-  star.add(makeGlowSprite(26));
+  star.add(makeGlowSprite(26 * rMax));
   group.add(star);
 
   const sunLabel = makeLabelEl(
@@ -1057,15 +1057,18 @@ function buildCluster(b, wi) {
   const marker = new THREE.Group();
   marker.add(makeGlowSprite(560));
   const allOrbits = b.sylls.flatMap(sd => sd.orbits);
+  /* 자소가 늘면 고리도 넓힌다 — 3개면 예전 그대로 210, 8개면 476쯤 되어 서로 안 겹친다 */
+  const mRR = Math.max(210, 182 / Math.sin(Math.PI / allOrbits.length));
   allOrbits.forEach((o, j) => {
-    /* 성단 뷰 마커는 계 뷰 확대와 무관하게 제 크기를 지킨다 */
+    /* 마커는 궤도 확대와 무관하게 제 크기를 지킨다 */
     const mr = 46 * (o.sz / 3);
+    const a = j / allOrbits.length * Math.PI * 2;
     const mp = new THREE.Group();
+    mp.rotation.y = -a;   /* 제 몫의 이모지가 고리 바깥쪽으로 서게 — 옆자리를 밟지 않는다 */
     mp.add(makeGlyphBillboard(o, mr));
     if (o.type === 'vowel') makeSaturnRing(mp, mr, o);
     else { makeConsRing(mp, mr, o); mp.add(emojiMoon(o.el, mr, mr * 3.1)); }
-    const a = j / allOrbits.length * Math.PI * 2;
-    mp.position.set(Math.cos(a) * 210, 0, Math.sin(a) * 210);
+    mp.position.set(Math.cos(a) * mRR, 0, Math.sin(a) * mRR);
     marker.add(mp);
   });
   marker.scale.setScalar(0.001);
@@ -1078,6 +1081,8 @@ function buildCluster(b, wi) {
     const tilts = syllableTilts(sd.orbits.length);
     const SC = SCALE * rOf(si);
     sd.orbits.forEach((o, j) => {
+      /* j는 음절 안 차례(기울기·작도 시차용), ji는 이름 전체 jamos에서의 자리(클릭 식별용) */
+      const ji = jamos.length;
       const jGroup = new THREE.Group();
       jGroup.quaternion.copy(tilts[j]);
       group.add(jGroup);
@@ -1168,12 +1173,14 @@ function buildCluster(b, wi) {
       };
 
       /* 행성 — 본체 없는 고리 천체. 자음: 正圓 오방색 링 띠 · 모음: 천지인 띠 + 위성.
-         본체 자리엔 자소 빌보드가 떠서 글자가 그대로 읽힌다 */
-      const radius = o.sz;
+         본체 자리엔 자소 빌보드가 떠서 글자가 그대로 읽힌다.
+         계가 커진 만큼 행성도 같이 키운다 — 안 그러면 카메라만 물러나 화면에서 작아지고
+         (음절 수에 비례해) 눌러 고르기가 어려워진다 */
+      const radius = o.sz * rMax;
       const planet = new THREE.Group();
       planet.add(makeGlyphBillboard(o, radius));
       planet.userData.sysIndex = sysIndex;
-      planet.userData.jamoIndex = j;
+      planet.userData.jamoIndex = ji;
       let moonGrp = null;
       if (o.type === 'vowel') {
         makeSaturnRing(planet, radius, o);
@@ -1203,7 +1210,7 @@ function buildCluster(b, wi) {
 
       const planetLabel = makeLabelEl(
         `<span class="ring-icon"></span><span class="name">${o.glyph}</span>`,
-        o.col, () => selectPlanet(sysIndex, j));
+        o.col, () => selectPlanet(sysIndex, ji));
       planet.add(planetLabel);
 
       jamos.push({
@@ -1725,7 +1732,7 @@ async function applyCardPalette(host, img, url, pal) {
   return pal;
 }
 
-/* jm = 자소 궤도 정보, sys = 그 자소가 속한 음절 계 */
+/* jm = 자소 궤도 정보, sys = 그 자소가 속한 이름 계 */
 function openLetter(jm, sys) {
   if (!Lscene) letterInit();
 
@@ -1925,10 +1932,12 @@ function animate() {
   galaxy.material.uniforms.uAlpha.value = galaxyF;
 
   /* ----- 사신수 별자리: 기본 은은히 보이고, 그 방위를 향하면 100%로 짙어진다.
-     은하 램프와 따로, 계(界) 뷰만 벗어나면 성단 단계부터 바로 차오른다 ----- */
+     은하 램프와 따로, 성단 안쪽만 벗어나면 바로 차오른다 ----- */
   camera.getWorldDirection(CAM_FWD);
   const fwLen = Math.hypot(CAM_FWD.x, CAM_FWD.z) || 1;
-  const sinsooF = smooth(dNear, 260, 1200);
+  /* 성단 안쪽 경계(260·rMax)와 같은 잣대 — 이름이 길어 성단이 커지면 그만큼 뒤로 미룬다 */
+  const kNear = (nc.cluster ? systems[nc.cluster.sysStart] : null)?.rMax || 1;
+  const sinsooF = smooth(dNear, 260 * kNear, 1200 * kNear);
   for (const s of sinsoos) {
     /* 그림은 카메라와 무관하게 늘 정면 — 화면 정렬 빌보드 */
     s.group.quaternion.copy(camera.quaternion);
@@ -2110,16 +2119,18 @@ function animate() {
 
     s.compass.mat.opacity = 0.07 * sysF;
 
-    /* 성단 뷰 계 마커 — 계에 가까우면 숨기고 성단 거리에서 등장 */
+    /* 멀리서 보는 마커 — 가까이 가면 숨기고 물러나면 등장 */
     const mF = smooth(dS, 500 * k, 2400 * k) * (clusters[s.clusterIndex] ? clusters[s.clusterIndex].cF : 0);
     s.marker.visible = mF > 0.02;
     if (s.marker.visible) {
-      s.marker.scale.setScalar(mF);
+      s.marker.scale.setScalar(mF * k);
       s.marker.rotation.y += dt * 0.05;
     }
 
-    s.sunLabel.element.style.opacity = clusterF;
-    s.sunLabel.element.style.pointerEvents = clusterF < 0.05 ? 'none' : 'auto';
+    /* 은하 표지와 같은 자리에 같은 글자다 — 멀면 표지에 넘기고 가까우면 넘겨받는다 */
+    const labF = clusterF * (1 - galaxyF);
+    s.sunLabel.element.style.opacity = labF;
+    s.sunLabel.element.style.pointerEvents = labF < 0.05 ? 'none' : 'auto';
   }
 
   /* ----- 카메라 트윈 ----- */

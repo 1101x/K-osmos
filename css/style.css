@@ -22,7 +22,7 @@
 @font-face {
   font-family: "Soonbatang";
   src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/SunBatang-Light.woff") format("woff"),
-       url("../src/font/SunBatang-Light.otf") format("opentype");
+    url("../src/font/SunBatang-Light.otf") format("opentype");
   font-weight: 300;
   font-style: normal;
   font-display: swap;
@@ -32,7 +32,7 @@
 @font-face {
   font-family: "Soonbatang";
   src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/SunBatang-Medium.woff") format("woff"),
-       url("../src/font/SunBatang-Medium.otf") format("opentype");
+    url("../src/font/SunBatang-Medium.otf") format("opentype");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -55,6 +55,8 @@ body {
   font-family: "Soonbatang", "Noto Serif KR", "Apple Color Emoji", serif;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #scene-container {
@@ -66,24 +68,37 @@ body {
   display: block;
 }
 
-/* ---------- 지붕 — 한옥 처마 기와 (상단 전폭) ---------- */
 /* ---------- 우측 세로 제목 ---------- */
 #brand {
   position: fixed;
-  top: calc(142 * var(--u));
+  top: calc(52 * var(--u));
   right: calc(62 * var(--u));
   z-index: 20;
-  writing-mode: vertical-rl;
-  font-size: calc(42 * var(--u));
+  /* 글자를 개별 행으로 배치해 Safari의 세로쓰기 글리프 잘림을 피한다. */
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+  font-size: calc(36* var(--u));
   font-weight: 300;
-  letter-spacing: 0.32em;
+  line-height: 1.1;
+  text-align: center;
   pointer-events: none;
+}
+
+#brand .brand-word {
+  display: flex;
+  flex-direction: column;
+}
+
+#brand .brand-word>span {
+  display: block;
+  min-width: 1.3em;
 }
 
 /* ---------- 이름 입력 (상단 중앙) ---------- */
 #input-wrap {
   position: fixed;
-  top: calc(113 * var(--u));
+  top: calc(43 * var(--u));
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
@@ -100,6 +115,8 @@ body {
 }
 
 #nameInput {
+  -webkit-user-select: text;
+  user-select: text;
   position: absolute;
   top: 50%;
   left: 50%;
@@ -115,6 +132,7 @@ body {
   letter-spacing: 0.1em;
   text-indent: 0.1em;
   width: 84%;
+  height: 70%;
   padding: 0;
   margin: 0;
 }
@@ -124,33 +142,37 @@ body {
   opacity: 0.9;
 }
 
+#nameInput:focus::placeholder {
+  opacity: 0.3;
+}
+
 /* ---------- 스케일 HUD (좌중앙) ---------- */
 #scale-hud {
   position: fixed;
   left: calc(44 * var(--u));
-  top: 47%;
+  top: 42%;
   z-index: 15;
   pointer-events: none;
 }
 
 #scale-hud .scale-label {
-  font-size: calc(22 * var(--u));
+  font-size: calc(20 * var(--u));
   letter-spacing: 0.12em;
 }
 
 #scale-hud .scale-name {
+  position: relative;
+  left: -4px;
+  margin-bottom: 4px;
   font-size: calc(48 * var(--u));
   font-weight: 300;
-  line-height: 1.2;
-  letter-spacing: 0.1em;
+  line-height: 1.4;
   text-shadow: 0 0 12px rgba(0, 0, 0, 0.95);
 }
 
 #scale-hud .scale-hint {
-  margin-top: calc(8 * var(--u));
-  font-size: calc(12.5 * var(--u));
+  font-size: calc(14 * var(--u));
   color: var(--txt-dim);
-  letter-spacing: 0.06em;
 }
 
 /* 우주보기 · 이름보기 — 사엽(四葉) 원 단추 */
@@ -304,16 +326,16 @@ body {
 /* 닫기 버튼 — 우주 위에 남는 유일한 UI */
 #letter-close {
   position: absolute;
-  top: 52px;
-  right: 52px;
+  top: calc(52 * var(--u));
+  right: calc(52 * var(--u));
   z-index: 46;
   background: rgba(16, 13, 10, 0.6);
   border: 1px solid var(--ui-border);
   border-radius: 2px;
-  width: 34px;
-  height: 34px;
+  width: calc(34 * var(--u));
+  height: calc(34 * var(--u));
   color: var(--txt-dim);
-  font-size: 14px;
+  font-size: calc(14 * var(--u));
   cursor: pointer;
   transition: color 0.2s, background 0.2s;
 }
@@ -458,7 +480,7 @@ body.reading #letter-panel {
   gap: calc(28 * var(--u));
 }
 
-.lp-rows > div {
+.lp-rows>div {
   display: flex;
   align-items: center;
   gap: calc(16 * var(--u));
@@ -488,7 +510,7 @@ body.reading #letter-panel {
 #compass-hud {
   position: fixed;
   left: calc(45 * var(--u));
-  top: calc(120 * var(--u));
+  top: calc(50 * var(--u));
   z-index: 30;
   width: calc(148 * var(--u));
   height: calc(148 * var(--u));
@@ -520,22 +542,6 @@ body.reading #letter-panel {
   opacity: 0;
   pointer-events: none;
   transform: scale(0.9);
-}
-
-@media (max-width: 720px) {
-  #timebar {
-    gap: 14px;
-    padding: 8px 16px;
-  }
-
-  #timebar .transport {
-    gap: 6px;
-  }
-
-  #letter-close {
-    top: 24px;
-    right: 24px;
-  }
 }
 
 /* 풀이(訓民正音)·이름풀이 화면에서는 우주 UI를 감춘다 — 판본만 남긴다 */
@@ -576,6 +582,17 @@ body:is(.reading, .divining) :is(#brand, #scale-hud, #input-wrap, #timebar, #btn
   display: flex;
 }
 
+/* :focus-visible을 모르는 옛 사파리에서 :hover까지 함께 죽지 않도록 규칙을 나눠 둔다 */
+#btn-reading:hover {
+  background-color: rgba(232, 226, 204, 0.1);
+}
+
+#btn-reading:focus-visible {
+  background-color: rgba(232, 226, 204, 0.1);
+  outline: 2px solid var(--txt);
+  outline-offset: 4px;
+}
+
 #btn-reading .br-name {
   font-weight: 500;
 }
@@ -591,43 +608,43 @@ body:is(.reading, .divining) :is(#brand, #scale-hud, #input-wrap, #timebar, #btn
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(10 * var(--u));
+  gap: calc(11 * var(--u));
   pointer-events: none;
 }
 
 #ohaeng-legend .knot {
-  width: calc(140 * var(--u));
+  width: calc(154 * var(--u));
   display: block;
 }
 
 #ohaeng-legend .lg-title {
-  font-size: calc(12.5 * var(--u));
+  font-size: calc(13.75 * var(--u));
   letter-spacing: 0.1em;
 }
 
 .lg-cols {
   display: flex;
-  gap: calc(5 * var(--u));
+  gap: calc(5.5 * var(--u));
 }
 
 .lg-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: calc(24 * var(--u));
-  font-size: calc(12.5 * var(--u));
-  line-height: 1.55;
+  width: calc(26.4 * var(--u));
+  font-size: calc(15.4 * var(--u));
+  line-height: 1.2;
 }
 
 .lg-col .lg-emoji {
-  font-size: calc(16 * var(--u));
-  line-height: 1.3;
+  font-size: calc(17.6 * var(--u));
+  line-height: 1.4;
 }
 
 .lg-col .lg-hanja {
-  font-size: calc(17 * var(--u));
-  line-height: 1.3;
-  margin-bottom: calc(8 * var(--u));
+  font-size: calc(13.2 * var(--u));
+  line-height: 1.8;
+  margin-bottom: calc(8.8 * var(--u));
 }
 
 
@@ -648,16 +665,16 @@ body:is(.reading, .divining) :is(#brand, #scale-hud, #input-wrap, #timebar, #btn
 
 #reading-close {
   position: absolute;
-  top: 30px;
-  right: 30px;
+  top: calc(30 * var(--u));
+  right: calc(30 * var(--u));
   z-index: 3;
-  width: 34px;
-  height: 34px;
+  width: calc(34 * var(--u));
+  height: calc(34 * var(--u));
   background: rgba(16, 13, 10, 0.6);
   border: 1px solid var(--ui-border);
   border-radius: 2px;
   color: var(--txt-dim);
-  font-size: 14px;
+  font-size: calc(14 * var(--u));
   cursor: pointer;
   transition: color 0.2s, background 0.2s;
 }
