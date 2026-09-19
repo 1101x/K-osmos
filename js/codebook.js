@@ -164,6 +164,26 @@ export function jejaText(g) {
   };
 }
 
+/* ═══ 자소 풀이 카드 문구 ═══ */
+
+/* jejaText가 돌려준 rule을 카드에 올릴 한글로 */
+export const RULE_KO = { '象形 基本字': '기본자', '加畫字': '가획자', '各自竝書': '병서자', '異體字': '이체자' };
+
+/* 오행 무리 — JAMO에서 뽑아 쓴다(표를 둘로 두면 한쪽만 고쳐 조용히 어긋난다).
+   차례는 제자 원리대로 기본자 → 가획자(획수 순) → 병서. 예: 火 ㄴㄷㅌㄹㄸ */
+export const FAMILY = EL.map((_, el) => Object.keys(JAMO)
+  .filter(g => JAMO[g][0] === el)
+  .sort((a, b) => JAMO[a][2] - JAMO[b][2] || JAMO[a][1] - JAMO[b][1]));
+
+/* 카드를 맺는 한 문장 — 오행 인덱스 순 */
+export const ENERGY_KO = [
+  '봄날의 나무처럼 곧게 뻗어 자라는 기운이니 성장의 에너지를 갖는다.',
+  '여름 불꽃처럼 위로 타오르는 기운이니 피어나는 에너지를 갖는다.',
+  '한가운데서 두루 품어 안는 기운이니 아우르는 에너지를 갖는다.',
+  '가을 쇠붙이처럼 거두어 굳히는 기운이니 여무는 에너지를 갖는다.',
+  '겨울 물처럼 낮은 곳으로 스며드는 기운이니 고요히 모이는 에너지를 갖는다.',
+];
+
 /* 중성 제자 — 기본자 ㆍㅡㅣ · 초출 ㅗㅏㅜㅓ · 재출 ㅛㅑㅠㅕ · 나머지 합용 */
 export const VBASE = new Set(['ㅡ', 'ㅣ']);
 export const VFIRST = new Set(['ㅗ', 'ㅏ', 'ㅜ', 'ㅓ']);
@@ -247,17 +267,11 @@ export function nameReading(name) {
   return {
     name, el, yang, yin, mid, traits, lack,
     lackLine: `${E.name}(${E.h})의 기운이 부족하니`,
-    advice: [
-      /* 土는 방위가 '가운데'라 '쪽'을 붙이면 말이 어색하다 */
-      E.dirKo === '가운데' ? '한가운데가 길하며' : `${E.dirKo}쪽이 길하며`,
-      `${WEAR_KO[lack]} 옷이 이롭고`,
-      `${surnamesOf(lack)[0]}씨 성이 귀인이다`,
-    ],
-    /* 명함형 풀이 화면용 — 항목별 낱개 값 */
+    /* 카드의 方位·服色·貴人 세 줄 */
     rx: {
-      hanja: E.h, elKo: E.name,
-      dir: E.dirKo === '가운데' ? '한가운데' : `${E.dirKo}쪽`, dirH: E.dir,
-      wear: WEAR_KO[lack], ohbang: OHBANG_KO[lack],
+      /* 土는 방위가 '가운데'라 '쪽'을 붙이면 말이 어색하다 */
+      dir: E.dirKo === '가운데' ? '한가운데' : `${E.dirKo}쪽`,
+      wear: WEAR_KO[lack],
       surname: surnamesOf(lack)[0],
     },
   };

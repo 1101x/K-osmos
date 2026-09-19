@@ -13,7 +13,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import {
   JAMO, EL, CODA_PARTS, decompose,
   CURVE, FAMKO, TWIN, VSEQ, YANG, YIN, SAMH, VOWEL_EL, VBASE, VFIRST, VSECOND,
-  jejaText,
+  jejaText, RULE_KO, FAMILY, ENERGY_KO,
   eqText, curveTurns, nameReading, OHBANG_KO,
 } from './codebook.js';
 
@@ -1529,18 +1529,7 @@ function letterInit() {
 
 }
 
-/* ── 자소 풀이 카드 데이터 ───────────────────────────────────
-   시안(card_jaso) 틀: 항목 3 + 3 두 열, 궤도 도형, 맺음 한 문장 */
-const RULE_KO = { '象形 基本字': '기본자', '加畫字': '가획자', '各自竝書': '병서자', '異體字': '이체자' };
-const FAMILY = [['ㄱ', 'ㅋ', 'ㄲ'], ['ㄴ', 'ㄷ', 'ㅌ', 'ㄹ', 'ㄸ'], ['ㅁ', 'ㅂ', 'ㅍ', 'ㅃ'], ['ㅅ', 'ㅈ', 'ㅊ', 'ㅆ', 'ㅉ'], ['ㅇ', 'ㅎ']];
-const ENERGY_KO = [
-  '봄날의 나무처럼 곧게 뻗어 자라는 기운이니 성장의 에너지를 갖는다.',
-  '여름 불꽃처럼 위로 타오르는 기운이니 피어나는 에너지를 갖는다.',
-  '한가운데서 두루 품어 안는 기운이니 아우르는 에너지를 갖는다.',
-  '가을 쇠붙이처럼 거두어 굳히는 기운이니 여무는 에너지를 갖는다.',
-  '겨울 물처럼 낮은 곳으로 스며드는 기운이니 고요히 모이는 에너지를 갖는다.',
-];
-
+/* ── 자소 풀이 카드 — 문구 표는 codebook.js에 있다 (항목 3+3, 궤도 도형, 맺음 한 문장) ── */
 function consData(jm) {
   const E = EL[jm.el], jj = jejaText(jm.glyph);
   return {
