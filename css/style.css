@@ -566,7 +566,7 @@ body:is(.reading, .divining) :is(#brand, #scale-hud, #input-wrap, #timebar, #btn
   min-width: calc(248 * var(--u));
   height: calc(64 * var(--u));
   padding: 0 calc(34 * var(--u));
-  background: url("../src/graphic/box_short.svg") center / 100% 100% no-repeat;
+  background: none;
   border: none;
   color: var(--txt);
   font-family: inherit;
@@ -580,6 +580,24 @@ body:is(.reading, .divining) :is(#brand, #scale-hud, #input-wrap, #timebar, #btn
 
 #btn-reading.on {
   display: flex;
+}
+
+/* 안쪽 장식만 9분할한다. 바깥 선은 SVG 경계에서 잘리지 않도록 CSS로 따로 그린다. */
+#btn-reading::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: calc(16 * var(--u)) solid transparent;
+  border-image: url("../src/graphic/box_short_inner.svg") 16 stretch;
+  pointer-events: none;
+}
+
+#btn-reading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 max(0.5px, calc(0.5 * var(--u))) var(--line);
+  pointer-events: none;
 }
 
 /* :focus-visible을 모르는 옛 사파리에서 :hover까지 함께 죽지 않도록 규칙을 나눠 둔다 */

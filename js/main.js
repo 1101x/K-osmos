@@ -379,7 +379,6 @@ galaxy.position.copy(sunWorldOfLocal.clone().negate());
 galaxy.material.uniforms.uAlpha.value = 0;
 scene.add(galaxy);
 
-const GALAXY_CENTER_DIR = galaxy.position.clone().normalize();
 
 /* ---------------- 사신수 별자리 — 은하 사방(東西南北) ----------------
    src/sinsoo 라인아트(투명 배경 위 흰 선)를 런타임에 캔버스로 샘플링해
@@ -547,8 +546,10 @@ SINSOO_SPEC.forEach(spec => {
 const CAM_FWD = new THREE.Vector3();
 
 /* ---------------- [뎁스 2] 성단 + 별 배경 (01 그대로) ---------------- */
+/* 구형 성단의 점별 밀도 — 기존 9000 / 15000 / 9000개의 70% */
+const CLUSTER_STAR_COUNTS = { warm: 6300, cool: 10500, core: 6300 };
 const starsWarm = makeStarField({
-  count: 9000,
+  count: CLUSTER_STAR_COUNTS.warm,
   radiusMin: 420, radiusMax: 1700,
   sizeMin: 8, sizeMax: 30,
   palette: [0xffd75e, 0xffc44d, 0xffe9a8, 0xff9e5e, 0xfff4d6],
@@ -556,7 +557,7 @@ const starsWarm = makeStarField({
   atten: 0.25,
 });
 const starsCool = makeStarField({
-  count: 15000,
+  count: CLUSTER_STAR_COUNTS.cool,
   radiusMin: 500, radiusMax: 1900,
   sizeMin: 3, sizeMax: 13,
   palette: [0xfffdf4, 0xf0e8d6, 0xd9cfb8, 0xfff2da],
@@ -566,7 +567,7 @@ const starsCool = makeStarField({
 scene.add(starsWarm, starsCool);
 
 const clusterCore = makeStarField({
-  count: 9000,
+  count: CLUSTER_STAR_COUNTS.core,
   sizeMin: 8, sizeMax: 32,
   palette: [0xffd75e, 0xffc44d, 0xffe9a8, 0xfff4d6, 0xff9e5e],
   twinkleAmp: 0.5,
@@ -580,28 +581,6 @@ const clusterCore = makeStarField({
   },
 });
 scene.add(clusterCore);
-
-const streamAxis = GALAXY_CENTER_DIR.clone();
-const streamU = new THREE.Vector3(0, 1, 0).cross(streamAxis).normalize();
-const streamV = streamAxis.clone().cross(streamU).normalize();
-const clusterStream = makeStarField({
-  count: 7000,
-  sizeMin: 8, sizeMax: 28,
-  palette: [0xffd75e, 0xffc44d, 0xff9e5e, 0xffe9a8],
-  twinkleAmp: 0.5,
-  atten: 0.25,
-  generate: () => {
-    const t = -2200 + Math.pow(Math.random(), 1.25) * 11500;
-    const spread = 240 + Math.max(t, 0) * 0.085;
-    const a = gauss() * spread, b = gauss() * spread;
-    return {
-      x: streamAxis.x * t + streamU.x * a + streamV.x * b,
-      y: streamAxis.y * t + streamU.y * a + streamV.y * b,
-      z: streamAxis.z * t + streamU.z * a + streamV.z * b,
-    };
-  },
-});
-scene.add(clusterStream);
 
 /* ═════════════════════════════════════════════════════════════
    한글 자소 각인 — 행성 표면과 별밭에 글자를 심는다
@@ -688,8 +667,8 @@ const SEED_JAMO = [
   'ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ',
   'ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ',
 ];
-/* 자모 별 총량 = 배경 별(warm 9000 + cool 15000)의 35% */
-const JAMO_STAR_COUNT = Math.round((9000 + 15000) * 0.15 / SEED_JAMO.length);
+/* 자모 별 총량 = 배경 별(warm + cool)의 15% — 기존 3600개 → 2520개 */
+const JAMO_STAR_COUNT = Math.round((CLUSTER_STAR_COUNTS.warm + CLUSTER_STAR_COUNTS.cool) * 0.15 / SEED_JAMO.length);
 function makeGlyphSprite(g) {
   const S = 128;
   return glyphCanvasTexture(S, S, (ctx) => {
@@ -706,7 +685,7 @@ const jamoSpriteCache = {};
 const jamoSprite = (g) => (jamoSpriteCache[g] || (jamoSpriteCache[g] = makeGlyphSprite(g)));
 
 /* 성단 하나치 자모 별밭 — 자소마다 한 필드씩. 성단 어디에서 보든 같은 하늘이 되도록
-   원점 성단과 문장 성단이 이 함수를 함께 쓴다 */
+   원점 성단과 추가 이름 성단이 이 함수를 함께 쓴다 */
 function jamoFields() {
   return SEED_JAMO.map(g => makeStarField({
     count: JAMO_STAR_COUNT,
@@ -964,21 +943,21 @@ function buildCluster(b, wi) {
   };
 
   /* --- 성단 별 배경 (원점 성단은 기존 01 배경이 담당)
-     원점과 동일한 4종 구성: warm 9000 + cool 15000 + core 9000 + stream 7000 --- */
+     원점과 동일한 구형 3종 구성: warm + cool + core --- */
   if (wi > 0) {
     const deco = new THREE.Group();
     deco.add(makeStarField({
-      count: 9000, radiusMin: 420, radiusMax: 1700, sizeMin: 8, sizeMax: 30,
+      count: CLUSTER_STAR_COUNTS.warm, radiusMin: 420, radiusMax: 1700, sizeMin: 8, sizeMax: 30,
       palette: [0xffd75e, 0xffc44d, 0xffe9a8, 0xff9e5e, 0xfff4d6],
       twinkleAmp: 0.55, atten: 0.25,
     }));
     deco.add(makeStarField({
-      count: 15000, radiusMin: 500, radiusMax: 1900, sizeMin: 3, sizeMax: 13,
+      count: CLUSTER_STAR_COUNTS.cool, radiusMin: 500, radiusMax: 1900, sizeMin: 3, sizeMax: 13,
       palette: [0xffffff, 0xbcd2ff, 0x8fb0ff, 0xe8e8ff],
       twinkleAmp: 0.35, atten: 0.25,
     }));
     deco.add(makeStarField({
-      count: 9000, sizeMin: 8, sizeMax: 32,
+      count: CLUSTER_STAR_COUNTS.core, sizeMin: 8, sizeMax: 32,
       palette: [0xffd75e, 0xffc44d, 0xffe9a8, 0xfff4d6, 0xff9e5e],
       twinkleAmp: 0.5, atten: 0.25,
       generate: () => {
@@ -987,25 +966,6 @@ function buildCluster(b, wi) {
         const th = Math.random() * Math.PI * 2;
         const sq = Math.sqrt(1 - u * u);
         return { x: r * sq * Math.cos(th), y: r * u, z: r * sq * Math.sin(th) };
-      },
-    }));
-    /* 은하 중심 방향 별 흐름 (원점의 clusterStream과 동일 규칙) */
-    const ax = galaxy.position.clone().sub(cpos).normalize();
-    const u1 = new THREE.Vector3(0, 1, 0).cross(ax).normalize();
-    const v1 = ax.clone().cross(u1).normalize();
-    deco.add(makeStarField({
-      count: 7000, sizeMin: 8, sizeMax: 28,
-      palette: [0xffd75e, 0xffc44d, 0xff9e5e, 0xffe9a8],
-      twinkleAmp: 0.5, atten: 0.25,
-      generate: () => {
-        const t = -2200 + Math.pow(Math.random(), 1.25) * 11500;
-        const spread = 240 + Math.max(t, 0) * 0.085;
-        const a = gauss() * spread, b = gauss() * spread;
-        return {
-          x: ax.x * t + u1.x * a + v1.x * b,
-          y: ax.y * t + u1.y * a + v1.y * b,
-          z: ax.z * t + u1.z * a + v1.z * b,
-        };
       },
     }));
     /* 자모 별밭 — 원점 성단의 jamoStars와 같은 구성 */
@@ -1922,13 +1882,11 @@ function animate() {
   starsWarm.material.uniforms.uTime.value = elapsedTime;
   starsCool.material.uniforms.uTime.value = elapsedTime;
   clusterCore.material.uniforms.uTime.value = elapsedTime;
-  clusterStream.material.uniforms.uTime.value = elapsedTime;
   galaxy.material.uniforms.uTime.value = elapsedTime;
 
   starsWarm.material.uniforms.uAlpha.value = originF;
   starsCool.material.uniforms.uAlpha.value = originF;
   clusterCore.material.uniforms.uAlpha.value = originF;
-  clusterStream.material.uniforms.uAlpha.value = originF;
   galaxy.material.uniforms.uAlpha.value = galaxyF;
 
   /* ----- 사신수 별자리: 기본 은은히 보이고, 그 방위를 향하면 100%로 짙어진다.

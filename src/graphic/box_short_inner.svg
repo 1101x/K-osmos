@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 이름풀이 버튼의 안쪽 장식. 바깥 선은 CSS로 그려 Safari의 SVG 경계 잘림을 피한다. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="248" height="64" viewBox="0 0 248 64" preserveAspectRatio="none">
+  <polygon fill="none" stroke="#e8e2cc" stroke-width="0.5" stroke-miterlimit="10"
+    points="5.5 13.5 9.5 13.5 9.5 5.5 5.5 5.5 5.5 9.5 13.5 9.5 13.5 5.5 234.5 5.5 234.5 9.5 242.5 9.5 242.5 5.5 238.5 5.5 238.5 13.5 242.5 13.5 242.5 50.5 238.5 50.5 238.5 58.5 242.5 58.5 242.5 54.5 234.5 54.5 234.5 58.5 13.5 58.5 13.5 54.5 5.5 54.5 5.5 58.5 9.5 58.5 9.5 50.5 5.5 50.5"/>
+</svg>
