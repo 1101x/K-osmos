@@ -16,6 +16,7 @@ import {
   jejaText, RULE_KO, FAMILY, ENERGY_KO,
   eqText, curveTurns, nameReading, OHBANG_KO,
 } from './codebook.js';
+import { SEED_NAMES } from './names.js';
 
 /* 색 표기 정규화 — THREE.Color는 8자리 hex(#rrggbbaa)도, 알파가 붙은 32비트 숫자도
    읽지 못하고 흰색으로 떨어진다. 색상 피커가 뱉는 값을 그대로 붙여 넣어도 되도록
@@ -1451,8 +1452,11 @@ let lastScaleName = '';
 function updateScaleHUD() {
   const { sys, d } = nearestSystem();
   const { word, d: dw } = nearestWord();
-  /* 이름 하나가 곧 성단이자 계 — 가까이서든 멀리서든 이름으로 부른다 */
-  const name = (word && dw < 18000) ? `${word.word} 성단` : '태극 은하';
+  /* 이름 하나가 곧 성단이자 계 — 가까이서든 멀리서든 이름으로 부른다.
+     은하 조망 자리에선 성단이 원반 위에 흩어져 있어 가까운 게 걸리기 마련이라
+     (기하학상 최단 17051) 거리만으론 못 가린다 — 얼마나 물러나 있는지도 같이 본다 */
+  const zoomedOut = camera.position.distanceTo(controls.target) >= 18000;
+  const name = (word && dw < 18000 && !zoomedOut) ? `${word.word} 성단` : '태극 은하';
   if (name !== lastScaleName) {
     lastScaleName = name;
     scaleNameEl.textContent = name;
@@ -1806,28 +1810,68 @@ document.getElementById('reading-close').addEventListener('click', closeReading)
 
 /* ═════════════════════════════════════════════════════════════
    입력 → 성단·계 재구성
-   savedNames = 엔터로 우주에 심은 이름들 · draft = 지금 적고 있는 이름
+   savedNames = 코드북에 미리 심어 둔 이름 + 엔터로 심은 이름 · draft = 지금 적고 있는 이름
    (draft는 언제나 맨 뒤 성단이라, 심어도 자리가 그대로다)
 ═════════════════════════════════════════════════════════════ */
 const input = document.getElementById('nameInput');
-const savedNames = [];
 let draft = { text: '', pos: null };
 
-const normName = (s) => [...s].filter(c => decompose(c) || c === ' ').join('');
+/* 이름에 남는 건 완성된 한글 음절뿐 — 띄어쓰기·특수문자·영문·숫자는 버린다 */
+const normName = (s) => [...s].filter(c => decompose(c)).join('');
 
-/* fly=true면 지금 적고 있는 이름의 첫 계로 카메라를 옮긴다 */
+/* 입력창에서 지울 글자 = 음절도 조합 중인 낱자(ㄱ, ㅏ)도 아닌 것.
+   낱자를 남겨 두지 않으면 한 글자 치다 만 사이에 글씨가 사라진다 */
+const HANGUL = /[\uAC00-\uD7A3\u3130-\u318F]/;
+const scrubInput = () => {
+  const clean = [...input.value].filter(c => HANGUL.test(c)).join('');
+  if (clean !== input.value) input.value = clean;
+};
+
+/* 같은 이름은 우주에 하나뿐이다 — 이미 있으면 새로 짓지 않고 그 자리로 간다 */
+const savedNames = [];
+const isPlanted = (name) => savedNames.some(n => n.text.trim() === name);
+const clusterOf = (name) => clusters.find(c => c.word === name);
+
+/* names.js SEED_NAMES = 열자마자 깔려 있는 이름들. 손으로 심은 것과 똑같이 다룬다 */
+for (const raw of SEED_NAMES) {
+  const text = normName(raw);
+  if (parseName(text).length && !isPlanted(text)) savedNames.push({ text, pos: null });
+}
+
+/* 관람객이 엔터로 심은 이름은 이 탭이 살아 있는 동안만 남는다 —
+   새로고침은 견디고, 창(탭)을 닫으면 지워져 다음 관람객은 씨앗부터 다시 본다.
+   사파리 비공개 창에선 저장 자체가 막히므로 실패해도 그냥 넘어간다.
+   자리는 저장하지 않는다 — 어차피 씨앗도 열 때마다 새로 뽑힌다 */
+const STORE_KEY = 'hangeul-name-trip.planted';
+const planted = [];
+const saveStore = () => { try { sessionStorage.setItem(STORE_KEY, JSON.stringify(planted)); } catch { /* 저장 못 해도 이번 판은 돈다 */ } };
+try {
+  for (const raw of JSON.parse(sessionStorage.getItem(STORE_KEY)) || []) {
+    const text = normName(String(raw));
+    if (parseName(text).length && !isPlanted(text)) { savedNames.push({ text, pos: null }); planted.push(text); }
+  }
+} catch { /* 저장값이 깨졌으면 씨앗만 들고 시작한다 */ }
+
+/* fly=true면 지금 적고 있는 이름의 첫 계로 카메라를 옮긴다.
+   이미 심긴 이름을 적고 있으면 draft를 덧짓지 않고 원래 성단으로 데려간다 */
 function rebuildUniverse(fly) {
-  buildAll(draft.text.trim() ? [...savedNames, draft] : savedNames);
+  const t = draft.text.trim();
+  const dup = !!t && isPlanted(t);
+  buildAll(t && !dup ? [...savedNames, draft] : savedNames);
   if (!fly) return;
-  const c = clusters[clusters.length - 1];
+  const c = dup ? clusterOf(t) : clusters[clusters.length - 1];
   if (c && c.systems.length) flyToSystem(c.systems[0]);
 }
 
-/* 조합 중인 낱자(ㄱ, ㅏ)는 decompose가 걸러 낸다. input.value는 건드리지 않는다
-   — 되쓰면 IME 조합이 깨진다.
+/* 조합 중인 낱자(ㄱ, ㅏ)는 decompose가 걸러 내 우주에는 안 올라간다.
+   입력창은 조합이 끝난 뒤에만 손본다 — 조합 중에 되쓰면 IME가 깨진다.
    한 글자에도 조합 이벤트가 서너 번 오므로, 손이 멈춘 뒤에 한 번만 짓는다 */
 let buildTimer = 0;
-input.addEventListener('input', () => {
+let composing = false;
+input.addEventListener('compositionstart', () => { composing = true; });
+input.addEventListener('compositionend', () => { composing = false; scrubInput(); });
+input.addEventListener('input', (e) => {
+  if (!composing && !e.isComposing) scrubInput();
   const norm = normName(input.value);
   if (norm === draft.text) return;
   draft.text = norm;
@@ -1839,9 +1883,11 @@ input.addEventListener('input', () => {
 input.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || e.isComposing) return;
   e.preventDefault();
-  if (!parseName(draft.text).length) return;
+  const t = draft.text.trim();
+  if (!parseName(t).length) return;
   clearTimeout(buildTimer);
-  savedNames.push(draft);
+  /* 이미 있는 이름이면 또 심지 않는다 — 카메라는 적는 동안 이미 그 성단에 가 있다 */
+  if (!isPlanted(t)) { savedNames.push(draft); planted.push(t); saveStore(); }
   draft = { text: '', pos: null };
   input.value = '';
   rebuildUniverse(false);
