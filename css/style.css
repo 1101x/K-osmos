@@ -6,7 +6,7 @@
   --u: min(100vw / 1920, 100vh / 1080);
 
   --line: #e8e2cc;
-  --ui-border: #e8e2cc;
+  --ui-border: rgba(232, 226, 204, 0.35);   /* UI 테두리 — 재생버튼·카드 닫기 공용 */
   --txt: #e8e2cc;
   --txt-dim: rgba(232, 226, 204, 0.6);
 
@@ -286,7 +286,7 @@ body {
   line-height: 1;
   color: var(--txt);
   background: transparent;
-  border: 1px solid rgba(232, 226, 204, 0.35);
+  border: 1px solid var(--ui-border);
   border-radius: 2px;
   cursor: pointer;
   transition: color 0.18s, border-color 0.18s, background 0.18s;
@@ -326,8 +326,8 @@ body {
 /* 닫기 버튼 — 우주 위에 남는 유일한 UI */
 #letter-close {
   position: absolute;
-  top: calc(52 * var(--u));
-  right: calc(52 * var(--u));
+  top: calc(100 * var(--u));
+  right: calc(100 * var(--u));
   z-index: 46;
   background: rgba(16, 13, 10, 0.6);
   border: 1px solid var(--ui-border);
@@ -683,8 +683,8 @@ body:is(.reading, .divining) :is(#brand, #scale-hud, #input-wrap, #timebar, #btn
 
 #reading-close {
   position: absolute;
-  top: calc(30 * var(--u));
-  right: calc(30 * var(--u));
+  top: calc(100 * var(--u));
+  right: calc(100 * var(--u));
   z-index: 3;
   width: calc(34 * var(--u));
   height: calc(34 * var(--u));

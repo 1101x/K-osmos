@@ -18,6 +18,7 @@ export const JAMO = {
 };
 
 /* ═══ 오행 표 ═══
+   색은 반드시 6자리 hex로 적는다 — '#rrggbbaa'는 THREE.Color가 못 읽고 말없이 흰색이 된다
    순서 = 오행 인덱스(0木 1火 2土 3金 4水). JAMO의 element 값이 이 인덱스다.
    col   : 궤도 라인 · 라벨 · 파편/먼지 입자
    trail : 행성 꼬리(잔상). 가산 6겹에서도 색이 유지되도록 진한 톤
@@ -29,8 +30,8 @@ export const JAMO = {
 export const EL = [
   {
     h: '木', accent: 0x45dbde, ko: '목', name: '나무',
-    col: '#5aa1d3ff', trail: '#4fbbc3ff',
-    tex: 'gray_mok.jpg', tint: '#5c9ebfff', glow: 0.10, churn: 1.0, latin: 'WOOD',
+    col: '#5aa1d3', trail: '#4fbbc3',
+    tex: 'gray_mok.jpg', tint: '#5c9ebf', glow: 0.10, churn: 1.0, latin: 'WOOD',
     sound: '牙音', soundKo: '어금닛소리', shape: '象舌根閉喉之形', shapeKo: '혀뿌리가 목구멍을 닫는 꼴',
     dir: '東', dirKo: '동', season: '春', seasonKo: '봄', ohbang: '靑', ohbangKo: '푸름',
     god: '靑龍', godKo: '청룡', virtue: '仁', virtueKo: '어짊', ink: '#1d5c86',
@@ -48,8 +49,8 @@ export const EL = [
   },
   {
     h: '土', accent: 0xf0cf3f, ko: '토', name: '흙',
-    col: '#f0cf3f', trail: '#fce898ff',
-    tex: 'gray_to.jpg', tint: '#ffe570ff', glow: 0.10, churn: 1.1, latin: 'EARTH',
+    col: '#f0cf3f', trail: '#fce898',
+    tex: 'gray_to.jpg', tint: '#ffe570', glow: 0.10, churn: 1.1, latin: 'EARTH',
     sound: '脣音', soundKo: '입술소리', shape: '象口形', shapeKo: '입의 꼴',
     dir: '中央', dirKo: '가운데', season: '長夏', seasonKo: '늦여름', ohbang: '黃', ohbangKo: '누름',
     god: '黃龍', godKo: '황룡', virtue: '信', virtueKo: '믿음', ink: '#7d5f0e',
@@ -57,7 +58,7 @@ export const EL = [
   },
   {
     h: '金', accent: 0xdfe6f2, ko: '금', name: '쇠',
-    col: '#efdfc0', trail: '#f2eedfff',
+    col: '#efdfc0', trail: '#f2eedf',
     /* 白 — 순백이면 하이라이트가 날아가므로 살짝 따뜻한 백 */
     tex: 'gray_geum.jpg', tint: '#f4efe4', glow: 0.06, churn: 0.7, latin: 'METAL',
     sound: '齒音', soundKo: '잇소리', shape: '象齒形', shapeKo: '이의 꼴',
@@ -67,7 +68,7 @@ export const EL = [
   },
   {
     h: '水', accent: 0x6fa8ff, ko: '수', name: '물',
-    col: '#b2c0d7ff', trail: '#3d476bff',
+    col: '#b2c0d7', trail: '#3d476b',
     /* 黑 — 검정에 가장 가깝게, 대신 발광을 올려 보이는 한계까지만 */
     tex: 'gray_su.jpg', tint: '#3b4658', glow: 0.34, churn: 0.9, latin: 'WATER',
     sound: '喉音', soundKo: '목구멍소리', shape: '象喉形', shapeKo: '목구멍의 꼴',
@@ -139,8 +140,8 @@ export const SAMH = ['天', '地', '人'];
    달 텍스처를 쓰며 위성도 같은 재질을 공유한다 */
 export const VOWEL_EL = {
   h: '中', accent: 0x9a9a9a, ko: '중성', name: '달',
-  col: '#3d3d3dff', trail: '#505050ff',
-  tex: '2k_moon.jpg', tint: '#505050ff', glow: 0.08, churn: 0.35, latin: 'MOON',
+  col: '#3d3d3d', trail: '#505050',
+  tex: '2k_moon.jpg', tint: '#505050', glow: 0.08, churn: 0.35, latin: 'MOON',
   sound: '中聲', soundKo: '가운뎃소리', shape: '取象於天地人', shapeKo: '하늘·땅·사람에서 꼴을 취함',
   dir: '中', dirKo: '가운데', season: '四時', seasonKo: '네 철', ohbang: '玄', ohbangKo: '가믈',
   god: '太極', godKo: '태극', virtue: '和', virtueKo: '어우러짐', ink: '#3a3226',
