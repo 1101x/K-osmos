@@ -1922,11 +1922,16 @@ input.addEventListener('keydown', (e) => {
   const t = draft.text.trim();
   if (!parseName(t).length) return;
   clearTimeout(buildTimer);
-  /* 이미 있는 이름이면 또 심지 않는다 — 카메라는 적는 동안 이미 그 성단에 가 있다 */
+  /* 이미 있는 이름이면 또 심지 않는다 */
   if (!isPlanted(t)) { savedNames.push(draft); planted.push(t); saveStore(); }
   draft = { text: '', pos: null };
   input.value = '';
   rebuildUniverse(false);
+  /* 비행은 여기서 시킨다 — 위 clearTimeout이 적는 중에 예약돼 있던 비행을 지운다.
+     마지막 글자 뒤 180ms 안에 엔터를 치면 그 비행이 영영 안 떠서,
+     카메라가 방금 폐기된 미완성 성단 자리로 날아가 빈 우주에 멈춘다 */
+  const c = clusterOf(t);
+  if (c && c.systems.length) flyToSystem(c.systems[0]);
 });
 
 /* ═════════════════════════════════════════════════════════════
