@@ -1077,7 +1077,8 @@ function buildCluster(b, wi) {
       /* j는 음절 안 차례(기울기·작도 시차용), ji는 이름 전체 jamos에서의 자리(클릭 식별용) */
       const ji = jamos.length;
       const jGroup = new THREE.Group();
-      jGroup.quaternion.copy(tilts[j]);
+      /* 모음은 기본 수평면(XZ)에 두고, 자음 궤도에만 무작위 기울기를 적용한다. */
+      if (o.type !== 'vowel') jGroup.quaternion.copy(tilts[j]);
       group.add(jGroup);
 
       /* 궤적 (v13 곡선 → 기울인 평면) */
