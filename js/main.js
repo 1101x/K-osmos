@@ -31,8 +31,8 @@ const R0 = 30;     /* 기본 궤도 반지름 */
 const WANG = 0.10; /* 원(모음) 궤도 각속도 */
 const SPEED = WANG * 2 * Math.PI * R0;  /* 모든 행성 공통 선속도 */
 const VOWEL_PLANET_SIZE = 2;
-const MOON_RADIUS_RATIO = 0.26;
-const EMOJI_UP = 1.5;   /* 자음 오행 이모지를 글자 위로 띄우는 높이 (행성 반경의 배수) */
+const MOON_RADIUS_RATIO = 0.25;
+const EMOJI_UP = 1.2;   /* 자음 오행 이모지를 글자 위로 띄우는 높이 (행성 반경의 배수) */
 
 function rng(seed) {
   let s = seed >>> 0 || 1;
@@ -2251,50 +2251,3 @@ function galaxyGaze() {
 draft.text = normName(input.value);
 rebuildUniverse(false);
 animate()
-window.__shot = (name, ji, W, H, distMul, elev) => {
-  draft.text = normName(name); rebuildUniverse(false);
-  const s = systems[(clusterOf(draft.text.trim()) || clusters[clusters.length - 1]).systems[0]];
-  const y = s.jamos[ji];
-  eachJamo(j => { j.age = REVEAL_DUR; j.tc = 0.62; });
-  setPaused(true); camTween = null;
-  const r0 = y.sz * s.planetScale;
-  const place = () => {
-    const wp = y.planet.getWorldPosition(new THREE.Vector3());
-    controls.target.copy(wp);
-    camera.position.copy(wp).addScaledVector(new THREE.Vector3(0.25, elev, 1).normalize(), r0 * distMul);
-    camera.lookAt(wp); camera.updateMatrixWorld();
-  };
-  place(); animate();            /* 이 거리 기준으로 불투명도를 채운다 */
-  const oldPR = renderer.getPixelRatio(), sz = renderer.getSize(new THREE.Vector2());
-  renderer.setPixelRatio(2); renderer.setSize(W, H, false);
-  camera.aspect = W / H; camera.updateProjectionMatrix();
-  place();                       /* controls.update가 밀어낸 카메라를 다시 세운다 */
-  renderer.render(scene, camera);
-  const url = renderer.domElement.toDataURL('image/png');
-  renderer.setPixelRatio(oldPR); renderer.setSize(sz.x, sz.y, false);
-  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-  window.__last = url;
-  return { 자소: y.glyph, 오행: EL[y.el] ? EL[y.el].h : '—', 반경: +r0.toFixed(1), KB: +(url.length / 1024).toFixed(0) };
-};
-/* 실험용 — 높이(up)를 바꿔가며 가로로 이어 붙인 비교판 */
-window.__strip = async (name, ji, ups) => {
-  const W = 620, H = 560;
-  const sheet = document.createElement('canvas');
-  sheet.width = W * ups.length; sheet.height = H + 30;
-  const g = sheet.getContext('2d');
-  g.fillStyle = '#0b0a10'; g.fillRect(0, 0, sheet.width, sheet.height);
-  for (let n = 0; n < ups.length; n++) {
-    window.__shot(name, ji, W, H, 6, 0.45);      /* 먼저 한 번 지어 스프라이트를 얻는다 */
-    const s = systems[clusterOf(normName(name).trim()).systems[0]], y = s.jamos[ji];
-    const em = y.moonGrp && y.moonGrp.children[0];
-    if (em) em.center.set(0.5, 0.5 - ups[n] * (y.sz * s.planetScale) / em.scale.x);
-    window.__shot(name, ji, W, H, 6, 0.45);      /* 바뀐 값으로 다시 찍는다 */
-    const img = new Image(); img.src = window.__last;
-    await new Promise(r => { img.onload = r; });
-    g.drawImage(img, n * W, 30, W, H);
-    g.fillStyle = '#e8e2cc'; g.font = '18px sans-serif'; g.textBaseline = 'middle';
-    g.fillText(`EMOJI_UP = ${ups[n]}`, n * W + 12, 15);
-  }
-  window.__last = sheet.toDataURL('image/png');
-  return { 단계: ups, KB: +(window.__last.length / 1024).toFixed(0) };
-};
