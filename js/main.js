@@ -1601,7 +1601,7 @@ function consData(jm) {
 function yinyang(v) {
   return YANG.has(v) ? ['陽', '밝고 발산하는 소리']
     : YIN.has(v) ? ['陰', '깊고 수렴하는 소리']
-      : ['中', '음도 양도 아닌 소리'];
+      : ['中', '음도 양도 치우치지 아니한 소리'];
 }
 
 /* 중성 제자 — 기본자 ㅡㅣ · 초출자 ㅗㅏㅜㅓ · 재출자 ㅛㅑㅠㅕ · 나머지 합용자 */
@@ -1611,7 +1611,7 @@ const vowelRule = (v) =>
 function vowelData(jm) {
   const tail = YANG.has(jm.glyph) ? '확산하는 양의 에너지를 갖는다'
     : YIN.has(jm.glyph) ? '수렴하는 음의 에너지를 갖는다'
-      : '어느 쪽에도 치우치지 않는 中의 에너지를 갖는다';
+      : '어느 쪽에도 치우치지 않는 중용의 에너지를 갖는다';
   return {
     kind: '母音',
     family: jm.seq.map(x => ['ㆍ', 'ㅡ', 'ㅣ'][x]),
@@ -1625,7 +1625,7 @@ function vowelData(jm) {
       ['地', `가로띠 ${jm.beltH}`],
       ['人', `세로띠 ${jm.beltV}`],
     ],
-    quote: `둥근 ㆍ는 하늘, 평평한 ㅡ는 땅, 곧게 선 ㅣ는 사람으로 셋이 어우러진 형상을 이루며 ${tail}.`,
+    quote: `둥근 ㆍ는 하늘, 평평한 ㅡ는 땅, 곧게 선 ㅣ는 사람으로 만물이 어우러진 형상을 이루며 ${tail}.`,
   };
 }
 
