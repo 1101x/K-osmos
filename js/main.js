@@ -1077,6 +1077,8 @@ function buildCluster(b, wi) {
       /* j는 음절 안 차례(기울기·작도 시차용), ji는 이름 전체 jamos에서의 자리(클릭 식별용) */
       const ji = jamos.length;
       const jGroup = new THREE.Group();
+      jGroup.userData.sysIndex = sysIndex;
+      jGroup.userData.jamoIndex = ji;
       /* 모음은 기본 수평면(XZ)에 두고, 자음 궤도에만 무작위 기울기를 적용한다. */
       if (o.type !== 'vowel') jGroup.quaternion.copy(tilts[j]);
       group.add(jGroup);
@@ -1419,38 +1421,68 @@ addEventListener('keydown', (e) => {
   }
 });
 
-/* 캔버스 클릭 → 레이캐스트 행성 선택 (계 뎁스에서만) */
+/* 행성과 궤도 주변을 같은 자소의 클릭 영역으로 쓴다 (계 뎁스에서만). */
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
+const orbitHitPoint = new THREE.Vector3();
+const ORBIT_HIT_PX = 12;   /* 궤도 선 양쪽의 여유 폭 — 확대율과 무관한 화면 px */
+
+function pickJamo(e) {
+  if (!letterOverlayEl.classList.contains('hidden')
+    || !readingOverlayEl.classList.contains('hidden')) return null;
+  const { sys, d } = nearestSystem();
+  if (!sys || d > 700 * sys.rMax || !sys.group.visible) return null;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+
+  /* 행성을 직접 누르면 겹쳐 보이는 궤도보다 먼저 선택한다. */
+  const planets = sys.jamos.filter(y => y.planet.visible).map(y => y.planet);
+  let hit = raycaster.intersectObjects(planets, true)[0];
+  if (!hit) {
+    const hitPx = e.pointerType === 'touch' ? 20 : ORBIT_HIT_PX;
+    /* 가장 먼 궤도까지 포함하는 월드 폭으로 후보를 찾고, 화면 px로 다시 좁힌다. */
+    raycaster.params.Line.threshold = hitPx * 2 * (d + sys.viewRadius)
+      / (camera.projectionMatrix.elements[5] * rect.height);
+    const orbits = sys.jamos.flatMap(y => [y.traj, ...(y.twinLines ? [y.twinLines[0]] : [])])
+      .filter(line => line.visible);
+    let bestDistSq = hitPx * hitPx;
+    for (const candidate of raycaster.intersectObjects(orbits, false)) {
+      orbitHitPoint.copy(candidate.point).project(camera);
+      if (orbitHitPoint.z < -1 || orbitHitPoint.z > 1) continue;
+      const dx = (orbitHitPoint.x - pointer.x) * rect.width / 2;
+      const dy = (orbitHitPoint.y - pointer.y) * rect.height / 2;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < bestDistSq) {
+        bestDistSq = distSq;
+        hit = candidate;
+      }
+    }
+  }
+  let object = hit?.object;
+  while (object && object.userData.sysIndex === undefined) object = object.parent;
+  return object?.userData || null;
+}
+
 let downXY = null;
-renderer.domElement.addEventListener('pointerdown', (e) => { downXY = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  downXY = e.button === 0 && e.isPrimary ? [e.clientX, e.clientY] : null;
+});
+renderer.domElement.addEventListener('pointercancel', () => { downXY = null; });
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!downXY) return;
   const moved = Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]);
   downXY = null;
   if (moved > 5) return;
-  if (!letterOverlayEl.classList.contains('hidden')) return;
-  const { sys, d } = nearestSystem();
-  if (!sys || d > 700 * sys.rMax) return;
-  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(systems.flatMap(s => s.jamos.map(y => y.planet)), true);
-  if (hits.length) {
-    let o = hits[0].object;
-    while (o && o.userData.sysIndex === undefined) o = o.parent;
-    if (o) selectPlanet(o.userData.sysIndex, o.userData.jamoIndex);
-  }
+  const target = pickJamo(e);
+  if (target) selectPlanet(target.sysIndex, target.jamoIndex);
 });
 
-/* 행성 호버 → 커서 손가락으로 변경 */
+/* 클릭과 같은 판정으로 행성·궤도 위에서 손가락 커서를 보여 준다. */
 renderer.domElement.addEventListener('pointermove', (e) => {
-  if (letterOverlayEl && !letterOverlayEl.classList.contains('hidden')) return;
-  const { sys, d } = nearestSystem();
-  if (!sys || d > 700 * sys.rMax) { renderer.domElement.style.cursor = 'default'; return; }
-  pointer.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(systems.flatMap(s => s.jamos.map(y => y.planet)), true);
-  renderer.domElement.style.cursor = hits.length ? 'pointer' : 'default';
+  renderer.domElement.style.cursor = pickJamo(e) ? 'pointer' : 'default';
 });
 
 /* ---------------- 시간/재생 UI ---------------- */
